@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tempmail
+      POSTGRES_PASSWORD: tempmail
+      POSTGRES_DB: tempmail
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tempmail"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://tempmail:tempmail@postgres:5432/tempmail
+      PORT: "8080"
+      SMTP_PORT: "25"
+      MAIL_DOMAIN: ${MAIL_DOMAIN:-tempmail.local}
+    ports:
+      # Expose SMTP on host port 25 so external mail servers can deliver mail.
+      # On hosts where 25 is taken, change the left side (e.g. "2525:25").
+      - "25:25"
+
+  web:
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+
+volumes:
+  pgdata:

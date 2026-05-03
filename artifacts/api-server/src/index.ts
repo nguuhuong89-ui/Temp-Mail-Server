@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startSmtpServer } from "./lib/smtp";
 
 const rawPort = process.env["PORT"];
 
@@ -20,6 +21,14 @@ app.listen(port, (err) => {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
-
-  logger.info({ port }, "Server listening");
+  logger.info({ port }, "HTTP server listening");
 });
+
+const smtpPort = Number(process.env["SMTP_PORT"] ?? 2525);
+if (!Number.isNaN(smtpPort) && smtpPort > 0) {
+  try {
+    startSmtpServer(smtpPort);
+  } catch (err) {
+    logger.error({ err, smtpPort }, "Failed to start SMTP server");
+  }
+}

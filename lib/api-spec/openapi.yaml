@@ -1,22 +1,24 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TempMail API - disposable email service
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: inbox
+  - name: emails
+  - name: domains
+  - name: ads
+  - name: stats
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +26,640 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /inbox/random:
+    post:
+      operationId: createRandomInbox
+      tags: [inbox]
+      summary: Generate a random disposable inbox address
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inbox"
+
+  /inbox/custom:
+    post:
+      operationId: createCustomInbox
+      tags: [inbox]
+      summary: Create a custom inbox with specified local part and domain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [localPart, domainId]
+              properties:
+                localPart:
+                  type: string
+                domainId:
+                  type: integer
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inbox"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /inbox/{address}:
+    get:
+      operationId: getInbox
+      tags: [inbox]
+      summary: Get inbox details and email list
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Inbox with emails
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxWithEmails"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteInbox
+      tags: [inbox]
+      summary: Delete an inbox and all its emails
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /inbox/{address}/refresh:
+    post:
+      operationId: extendInbox
+      tags: [inbox]
+      summary: Extend inbox expiry by 10 minutes
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Extended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inbox"
+
+  /emails/{id}:
+    get:
+      operationId: getEmail
+      tags: [emails]
+      summary: Get full email content
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Email"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteEmail
+      tags: [emails]
+      summary: Delete an email
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /emails:
+    get:
+      operationId: listAllEmails
+      tags: [emails]
+      summary: Admin - list all emails across the system
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+        - name: domainId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Emails
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmailPreview"
+
+  /domains:
+    get:
+      operationId: listDomains
+      tags: [domains]
+      summary: List all domains
+      responses:
+        "200":
+          description: Domains
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Domain"
+    post:
+      operationId: createDomain
+      tags: [domains]
+      summary: Add a new domain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                isPublic:
+                  type: boolean
+                  default: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Domain"
+        "409":
+          description: Already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /domains/{id}:
+    patch:
+      operationId: updateDomain
+      tags: [domains]
+      summary: Update domain status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [active, paused, blocked]
+                isPublic:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Domain"
+    delete:
+      operationId: deleteDomain
+      tags: [domains]
+      summary: Delete a domain
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /domains/{id}/check:
+    post:
+      operationId: checkDomainDns
+      tags: [domains]
+      summary: Check MX records for a domain
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: DNS status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsCheck"
+
+  /ads:
+    get:
+      operationId: listAds
+      tags: [ads]
+      summary: List all ad campaigns
+      responses:
+        "200":
+          description: Ads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ad"
+    post:
+      operationId: createAd
+      tags: [ads]
+      summary: Create an ad campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, placement, content]
+              properties:
+                name:
+                  type: string
+                placement:
+                  type: string
+                  enum: [header, sidebar, inbox_top, email_body]
+                content:
+                  type: string
+                imageUrl:
+                  type: ["string", "null"]
+                linkUrl:
+                  type: ["string", "null"]
+                isActive:
+                  type: boolean
+                  default: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ad"
+
+  /ads/{id}:
+    patch:
+      operationId: updateAd
+      tags: [ads]
+      summary: Update an ad
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                placement:
+                  type: string
+                  enum: [header, sidebar, inbox_top, email_body]
+                content:
+                  type: string
+                imageUrl:
+                  type: ["string", "null"]
+                linkUrl:
+                  type: ["string", "null"]
+                isActive:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ad"
+    delete:
+      operationId: deleteAd
+      tags: [ads]
+      summary: Delete an ad
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /ads/active:
+    get:
+      operationId: getActiveAds
+      tags: [ads]
+      summary: Get active ads grouped by placement (for end-user UI)
+      responses:
+        "200":
+          description: Active ads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ad"
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Admin dashboard summary stats
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /stats/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [stats]
+      summary: Recent system activity feed
+      responses:
+        "200":
+          description: Activity items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /stats/timeseries:
+    get:
+      operationId: getEmailTimeseries
+      tags: [stats]
+      summary: Email volume over the last 24 hours, bucketed hourly
+      responses:
+        "200":
+          description: Buckets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeBucket"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    Inbox:
+      type: object
+      required: [address, token, createdAt, expiresAt]
+      properties:
+        address:
+          type: string
+        token:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    EmailPreview:
+      type: object
+      required: [id, toAddress, fromAddress, subject, preview, hasAttachments, receivedAt]
+      properties:
+        id:
+          type: integer
+        toAddress:
+          type: string
+        fromAddress:
+          type: string
+        subject:
+          type: string
+        preview:
+          type: string
+        hasAttachments:
+          type: boolean
+        receivedAt:
+          type: string
+          format: date-time
+
+    Email:
+      type: object
+      required: [id, toAddress, fromAddress, subject, textBody, htmlBody, hasAttachments, receivedAt]
+      properties:
+        id:
+          type: integer
+        toAddress:
+          type: string
+        fromAddress:
+          type: string
+        subject:
+          type: string
+        textBody:
+          type: string
+        htmlBody:
+          type: string
+        hasAttachments:
+          type: boolean
+        receivedAt:
+          type: string
+          format: date-time
+
+    InboxWithEmails:
+      type: object
+      required: [address, createdAt, expiresAt, emails]
+      properties:
+        address:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        emails:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailPreview"
+
+    Domain:
+      type: object
+      required: [id, name, status, isPublic, emailCount, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, paused, blocked]
+        isPublic:
+          type: boolean
+        emailCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    DnsCheck:
+      type: object
+      required: [domain, mxValid, mxRecords, checkedAt]
+      properties:
+        domain:
+          type: string
+        mxValid:
+          type: boolean
+        mxRecords:
+          type: array
+          items:
+            type: string
+        checkedAt:
+          type: string
+          format: date-time
+
+    Ad:
+      type: object
+      required: [id, name, placement, content, isActive, impressions, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        placement:
+          type: string
+          enum: [header, sidebar, inbox_top, email_body]
+        content:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        linkUrl:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        impressions:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    DashboardStats:
+      type: object
+      required: [totalEmails, emailsToday, activeInboxes, totalDomains, activeDomains, totalAds, activeAds]
+      properties:
+        totalEmails:
+          type: integer
+        emailsToday:
+          type: integer
+        activeInboxes:
+          type: integer
+        totalDomains:
+          type: integer
+        activeDomains:
+          type: integer
+        totalAds:
+          type: integer
+        activeAds:
+          type: integer
+
+    ActivityItem:
+      type: object
+      required: [id, type, message, timestamp]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [email_received, inbox_created, domain_added, ad_created]
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    TimeBucket:
+      type: object
+      required: [hour, count]
+      properties:
+        hour:
+          type: string
+          format: date-time
+        count:
+          type: integer
