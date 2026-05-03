@@ -61,6 +61,11 @@ export default function ApiDocs() {
   const curlGet = `curl ${base}/api/v1/inboxes/abc123@example.com/emails/42 \\
   -H "X-API-Key: tm_live_..."`;
 
+  const curlWait = `# Long-poll up to 60s for the next verification code
+curl "${base}/api/v1/inboxes/abc123@example.com/wait-for-code?timeout=45&since=$(date -u +%FT%TZ)" \\
+  -H "X-API-Key: tm_live_..."
+# → {"code":"482910","source":"context","emailId":42,"fromAddress":"...","subject":"...","receivedAt":"..."}`;
+
   const jsExample = `const API = "${base}/api/v1";
 const KEY = process.env.TEMPMAIL_KEY;
 
@@ -71,26 +76,25 @@ const inbox = await fetch(\`\${API}/inboxes\`, {
   body: JSON.stringify({ ttlMinutes: 15 }),
 }).then(r => r.json());
 
-console.log("Inbox address:", inbox.address);
+console.log("Inbox:", inbox.address);
+const since = new Date().toISOString();
 
-// 2. Poll for incoming mail (or use a webhook on the domain)
-for (let i = 0; i < 30; i++) {
-  const { emails } = await fetch(
-    \`\${API}/inboxes/\${inbox.address}/emails\`,
-    { headers: { "X-API-Key": KEY } },
-  ).then(r => r.json());
-  if (emails.length) {
-    const full = await fetch(
-      \`\${API}/inboxes/\${inbox.address}/emails/\${emails[0].id}\`,
-      { headers: { "X-API-Key": KEY } },
-    ).then(r => r.json());
-    console.log("Got email:", full.subject, full.textBody);
-    break;
-  }
-  await new Promise(r => setTimeout(r, 2000));
+// 2. Trigger your signup with inbox.address here ...
+//    e.g. await signupAt("https://example.com", inbox.address);
+
+// 3. Wait up to 45s for the verification code (single request, no polling).
+const res = await fetch(
+  \`\${API}/inboxes/\${inbox.address}/wait-for-code?timeout=45&since=\${since}\`,
+  { headers: { "X-API-Key": KEY } },
+);
+if (res.ok) {
+  const { code, fromAddress } = await res.json();
+  console.log(\`Got code \${code} from \${fromAddress}\`);
+} else {
+  console.error("No code arrived in time");
 }`;
 
-  const pyExample = `import os, time, requests
+  const pyExample = `import os, datetime, requests
 
 API = "${base}/api/v1"
 KEY = os.environ["TEMPMAIL_KEY"]
@@ -98,18 +102,21 @@ H = {"X-API-Key": KEY}
 
 inbox = requests.post(f"{API}/inboxes", headers=H, json={"ttlMinutes": 15}).json()
 print("Inbox:", inbox["address"])
+since = datetime.datetime.utcnow().isoformat() + "Z"
 
-for _ in range(30):
-    emails = requests.get(f"{API}/inboxes/{inbox['address']}/emails", headers=H).json()["emails"]
-    if emails:
-        full = requests.get(
-            f"{API}/inboxes/{inbox['address']}/emails/{emails[0]['id']}",
-            headers=H,
-        ).json()
-        print("Subject:", full["subject"])
-        print(full["textBody"])
-        break
-    time.sleep(2)`;
+# trigger your signup with inbox["address"] here ...
+
+r = requests.get(
+    f"{API}/inboxes/{inbox['address']}/wait-for-code",
+    headers=H,
+    params={"timeout": 45, "since": since},
+    timeout=60,
+)
+if r.ok:
+    data = r.json()
+    print(f"Code: {data['code']} (from {data['fromAddress']})")
+else:
+    print("No code arrived in time")`;
 
   return (
     <AdminLayout>
@@ -144,6 +151,8 @@ for _ in range(30):
             <Endpoint method="GET" path="/api/v1/inboxes/{address}/emails" desc="List incoming emails" />
             <Endpoint method="GET" path="/api/v1/inboxes/{address}/emails/{id}" desc="Get full email body" />
             <Endpoint method="DELETE" path="/api/v1/inboxes/{address}/emails/{id}" desc="Delete a single email" />
+            <Endpoint method="GET" path="/api/v1/inboxes/{address}/latest-code" desc="Extract code from recent emails (sync)" />
+            <Endpoint method="GET" path="/api/v1/inboxes/{address}/wait-for-code" desc="Long-poll for new verification code" />
             <Endpoint method="GET" path="/api/v1/domains" desc="List active domains" />
           </div>
         </section>
@@ -165,6 +174,8 @@ for _ in range(30):
               <CodeBlock code={curlList} />
               <p className="text-sm text-muted-foreground">Read full email body:</p>
               <CodeBlock code={curlGet} />
+              <p className="text-sm text-muted-foreground">Wait for the next verification code (recommended for signups):</p>
+              <CodeBlock code={curlWait} />
             </TabsContent>
             <TabsContent value="js" className="pt-3">
               <CodeBlock code={jsExample} />
@@ -178,6 +189,12 @@ for _ in range(30):
         <section className="space-y-3">
           <h2 className="text-xl font-semibold">Tips for agents</h2>
           <ul className="list-disc pl-6 space-y-1.5 text-sm text-muted-foreground">
+            <li>
+              Prefer <code className="font-mono text-xs">wait-for-code</code> over polling — it long-polls (max 60s) and resolves the moment a matching email arrives. Always pass <code className="font-mono text-xs">since</code> set to the time you triggered the signup, so old codes are ignored.
+            </li>
+            <li>
+              The extractor recognises 4–8 digit OTPs (incl. <code className="font-mono text-xs">123-456</code>) and 6–10 char alphanumeric tokens. Override with <code className="font-mono text-xs">?pattern=\d{"{6}"}</code> if your provider uses an unusual format.
+            </li>
             <li>
               Set <code className="font-mono text-xs">ttlMinutes</code> to limit inbox lifetime (1–10080).
             </li>

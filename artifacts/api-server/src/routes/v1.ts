@@ -9,6 +9,8 @@ import {
 } from "../lib/inbox-utils";
 import { ensureDefaultDomain } from "../lib/domain-cache";
 import { apiKeyAuth } from "../lib/api-key-auth";
+import { extractCodeFromEmail } from "../lib/code-extract";
+import { emailBus, type EmailEvent } from "../lib/events";
 
 const router: IRouter = Router();
 
@@ -215,6 +217,185 @@ router.delete("/v1/inboxes/:address/emails/:id", async (req, res) => {
   if (result.length === 0) { res.status(404).json({ error: "Email not found" }); return; }
   res.status(204).end();
 });
+
+// Helpers shared by both code-lookup endpoints.
+const MAX_PATTERN_LEN = 200;
+function parseIntInRange(value: unknown, def: number, min: number, max: number): number | null {
+  if (value === undefined) return def;
+  const n = Number(value);
+  if (!Number.isFinite(n) || !Number.isInteger(n)) return null;
+  if (n < min || n > max) return null;
+  return n;
+}
+function readPattern(value: unknown): string | undefined | null {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") return null;
+  if (value.length === 0) return undefined;
+  if (value.length > MAX_PATTERN_LEN) return null;
+  return value;
+}
+
+// GET /v1/inboxes/:address/latest-code?lookback=10&pattern=
+// Synchronously scans the most recent N emails of an inbox and returns the
+// best-guess verification code. 404 if no code found.
+router.get("/v1/inboxes/:address/latest-code", async (req, res) => {
+  const address = String(req.params["address"]).toLowerCase();
+  const r = await loadOwnedInbox(address, ownerId(req));
+  if (r.status === 404) { res.status(404).json({ error: "Inbox not found" }); return; }
+
+  const lookback = parseIntInRange(req.query["lookback"], 10, 1, 50);
+  if (lookback === null) { res.status(400).json({ error: "Invalid `lookback` (1–50)" }); return; }
+  const pattern = readPattern(req.query["pattern"]);
+  if (pattern === null) { res.status(400).json({ error: `Invalid \`pattern\` (max ${MAX_PATTERN_LEN} chars)` }); return; }
+
+  const rows = await db
+    .select({
+      id: emailsTable.id,
+      subject: emailsTable.subject,
+      fromAddress: emailsTable.fromAddress,
+      textBody: emailsTable.textBody,
+      htmlBody: emailsTable.htmlBody,
+      receivedAt: emailsTable.receivedAt,
+    })
+    .from(emailsTable)
+    .where(eq(emailsTable.toAddress, address))
+    .orderBy(desc(emailsTable.receivedAt))
+    .limit(lookback);
+
+  for (const row of rows) {
+    const found = extractCodeFromEmail(row, pattern);
+    if (found) {
+      res.json({
+        code: found.code,
+        source: found.source,
+        emailId: row.id,
+        fromAddress: row.fromAddress,
+        subject: row.subject,
+        receivedAt: row.receivedAt.toISOString(),
+      });
+      return;
+    }
+  }
+  res.status(404).json({ error: "No verification code found", scanned: rows.length });
+});
+
+// GET /v1/inboxes/:address/wait-for-code?timeout=30&since=<iso>&pattern=
+// Long-polls (max 60s) until a new email containing a verification code
+// arrives. `since` (ISO timestamp) ignores emails older than that — clients
+// should pass the time they sent the signup request.
+const MAX_WAIT_MS = 60_000;
+router.get("/v1/inboxes/:address/wait-for-code", async (req, res) => {
+  const address = String(req.params["address"]).toLowerCase();
+  const r = await loadOwnedInbox(address, ownerId(req));
+  if (r.status === 404) { res.status(404).json({ error: "Inbox not found" }); return; }
+
+  const timeoutSec = parseIntInRange(req.query["timeout"], 30, 1, 60);
+  if (timeoutSec === null) { res.status(400).json({ error: "Invalid `timeout` (1–60 seconds)" }); return; }
+  const timeoutMs = timeoutSec * 1000;
+  const pattern = readPattern(req.query["pattern"]);
+  if (pattern === null) { res.status(400).json({ error: `Invalid \`pattern\` (max ${MAX_PATTERN_LEN} chars)` }); return; }
+  const sinceParam = typeof req.query["since"] === "string" ? req.query["since"] : null;
+  const since = sinceParam ? new Date(sinceParam) : new Date(Date.now() - 5 * 60_000);
+  if (Number.isNaN(since.getTime())) { res.status(400).json({ error: "Invalid `since` timestamp" }); return; }
+
+  // Fast path: a matching code is already sitting in the inbox.
+  const existing = await scanForCode(address, since, pattern);
+  if (existing) { res.json(existing); return; }
+
+  // Slow path: subscribe to the inbox event bus and resolve when a matching
+  // email arrives, or timeout.
+  const aborted = { value: false };
+  const result = await new Promise<Awaited<ReturnType<typeof scanForCode>> | null>(
+    (resolve) => {
+      let settled = false;
+      let scanInFlight = false;
+      let pendingScan = false;
+      const runScan = async (ev: EmailEvent) => {
+        if (settled) return;
+        if (scanInFlight) { pendingScan = true; return; }
+        scanInFlight = true;
+        try {
+          const found = await scanForCode(address, since, pattern, ev.emailId);
+          if (settled) return;
+          if (found) { settled = true; cleanup(); resolve(found); return; }
+        } finally {
+          scanInFlight = false;
+        }
+        if (pendingScan && !settled) {
+          pendingScan = false;
+          // Coalesce: re-scan once more without a specific id to catch any
+          // events that arrived during the previous query.
+          await runScan(ev);
+        }
+      };
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(null);
+      }, timeoutMs);
+      function cleanup() {
+        clearTimeout(timer);
+        emailBus.off(address, runScan);
+        req.off("close", onClose);
+      }
+      const onClose = () => {
+        if (settled) return;
+        settled = true;
+        aborted.value = true;
+        cleanup();
+        resolve(null);
+      };
+      emailBus.on(address, runScan);
+      req.on("close", onClose);
+    },
+  );
+
+  // Client may have hung up — don't try to write to a closed socket.
+  if (aborted.value || res.writableEnded) return;
+  if (!result) { res.status(408).json({ error: "Timed out waiting for code" }); return; }
+  res.json(result);
+});
+
+async function scanForCode(
+  address: string,
+  since: Date,
+  pattern: string | undefined,
+  preferEmailId?: number,
+) {
+  const rows = await db
+    .select({
+      id: emailsTable.id,
+      subject: emailsTable.subject,
+      fromAddress: emailsTable.fromAddress,
+      textBody: emailsTable.textBody,
+      htmlBody: emailsTable.htmlBody,
+      receivedAt: emailsTable.receivedAt,
+    })
+    .from(emailsTable)
+    .where(eq(emailsTable.toAddress, address))
+    .orderBy(desc(emailsTable.receivedAt))
+    .limit(20);
+  const recent = rows.filter((r) => r.receivedAt.getTime() >= since.getTime());
+  // If we got here from a notification, prefer that specific email first.
+  const ordered = preferEmailId
+    ? [...recent].sort((a, b) => (a.id === preferEmailId ? -1 : b.id === preferEmailId ? 1 : 0))
+    : recent;
+  for (const row of ordered) {
+    const found = extractCodeFromEmail(row, pattern);
+    if (found) {
+      return {
+        code: found.code,
+        source: found.source,
+        emailId: row.id,
+        fromAddress: row.fromAddress,
+        subject: row.subject,
+        receivedAt: row.receivedAt.toISOString(),
+      };
+    }
+  }
+  return null;
+}
 
 router.get("/v1/domains", async (req, res) => {
   const u = ownerUserId(req);
