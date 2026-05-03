@@ -1,6 +1,10 @@
 import { Link } from "wouter";
-import { Mail } from "lucide-react";
+import { Mail, User as UserIcon, LogIn } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
+import { Show, UserButton } from "@clerk/react";
+import { Button } from "@/components/ui/button";
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,10 +15,28 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <Mail className="h-6 w-6 text-primary" />
             <span>TempMail</span>
           </Link>
-          <nav className="flex items-center gap-4">
-            <Link href="/admin" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Operator
-            </Link>
+          <nav className="flex items-center gap-3">
+            <Show when="signed-in">
+              <Link href="/account">
+                <Button variant="ghost" size="sm" data-testid="link-account">
+                  <UserIcon className="h-4 w-4 mr-1" /> Tài khoản
+                </Button>
+              </Link>
+              <UserButton
+                userProfileMode="navigation"
+                userProfileUrl={`${basePath}/account`}
+              />
+            </Show>
+            <Show when="signed-out">
+              <Link href="/sign-in">
+                <Button variant="ghost" size="sm" data-testid="link-signin">
+                  <LogIn className="h-4 w-4 mr-1" /> Đăng nhập
+                </Button>
+              </Link>
+              <Link href="/sign-up">
+                <Button size="sm" data-testid="link-signup">Đăng ký</Button>
+              </Link>
+            </Show>
             <ThemeToggle />
           </nav>
         </div>

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Globe, Mail, Megaphone, Settings, ArrowLeft, ShieldAlert, Key, Code2 } from "lucide-react";
+import { LayoutDashboard, Globe, Mail, Megaphone, Settings, ArrowLeft, ShieldAlert, Key, Code2, Users } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { AdminGate, AdminLogoutButton } from "@/components/admin-gate";
 
@@ -16,6 +16,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   const nav = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/domains", label: "Domains", icon: Globe },
     { href: "/admin/emails", label: "Emails", icon: Mail },
     { href: "/admin/ads", label: "Campaigns", icon: Megaphone },

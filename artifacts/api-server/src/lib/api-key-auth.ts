@@ -58,7 +58,8 @@ export async function apiKeyAuth(req: Request, res: Response, next: NextFunction
     res.status(401).json({ error: "Invalid or revoked API key" });
     return;
   }
-  (req as Request & { apiKeyId?: number }).apiKeyId = row.id;
+  (req as Request & { apiKeyId?: number; apiKeyUserId?: string | null }).apiKeyId = row.id;
+  (req as Request & { apiKeyUserId?: string | null }).apiKeyUserId = row.userId;
   const now = Date.now();
   const last = lastUsedDebounce.get(row.id) ?? 0;
   if (now - last > LAST_USED_INTERVAL_MS) {

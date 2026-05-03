@@ -8,19 +8,28 @@ import statsRouter from "./stats";
 import blocklistRouter from "./blocklist";
 import v1Router from "./v1";
 import apiKeysRouter from "./api-keys";
+import accountRouter from "./account";
+import adminUsersRouter from "./admin-users";
 import { adminAuth } from "../middlewares/admin-auth";
+import { attachUser, requireAdmin } from "../middlewares/clerk-auth";
 
 const router: IRouter = Router();
 
-// Public endpoints
+// Public endpoints (note: inbox routes use attachUser to optionally tag with signed-in user)
 router.use(healthRouter);
-router.use(inboxRouter);
+router.use(attachUser, inboxRouter);
 router.use(publicAdsRouter);
 
 // Public API for AI agents / external integrations (auth via X-API-Key)
 router.use(v1Router);
 
-// Admin-only endpoints
+// Authenticated user (Clerk) endpoints
+router.use(accountRouter);
+
+// Clerk-admin endpoints (role=admin in users table)
+router.use("/admin", attachUser, requireAdmin, adminUsersRouter);
+
+// Legacy admin-token endpoints
 router.use(adminAuth);
 router.use(emailsRouter);
 router.use(domainsRouter);

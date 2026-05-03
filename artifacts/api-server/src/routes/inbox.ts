@@ -12,7 +12,8 @@ import { ensureDefaultDomain, lookupDomain } from "../lib/domain-cache";
 
 const router: IRouter = Router();
 
-router.post("/inbox/random", async (_req, res) => {
+router.post("/inbox/random", async (req, res) => {
+  const userId = (req as Request & { userId?: string }).userId ?? null;
   const domain = await ensureDefaultDomain(process.env["MAIL_DOMAIN"] ?? "tempmail.local");
   for (let attempt = 0; attempt < 5; attempt++) {
     const local = generateLocalPart();
@@ -22,7 +23,7 @@ router.post("/inbox/random", async (_req, res) => {
     try {
       const [row] = await db
         .insert(inboxesTable)
-        .values({ address, token, expiresAt })
+        .values({ address, token, expiresAt, ownerUserId: userId })
         .returning();
       if (!row) continue;
       res.json({
@@ -40,6 +41,7 @@ router.post("/inbox/random", async (_req, res) => {
 });
 
 router.post("/inbox/custom", async (req: Request, res: Response) => {
+  const userId = (req as Request & { userId?: string }).userId ?? null;
   const { localPart, domainId } = req.body ?? {};
   if (typeof localPart !== "string" || !isValidLocalPart(localPart)) {
     res.status(400).json({ error: "Invalid local part" });
@@ -62,6 +64,11 @@ router.post("/inbox/custom", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Domain not active" });
     return;
   }
+  // Private (custom) domains may only be used by their owner.
+  if (!domain.isPublic && (!userId || domain.userId !== userId)) {
+    res.status(403).json({ error: "Domain not available" });
+    return;
+  }
   void lookupDomain;
   const address = `${localPart}@${domain.name}`.toLowerCase();
   const token = generateToken();
@@ -69,7 +76,7 @@ router.post("/inbox/custom", async (req: Request, res: Response) => {
   try {
     const [row] = await db
       .insert(inboxesTable)
-      .values({ address, token, expiresAt })
+      .values({ address, token, expiresAt, ownerUserId: userId })
       .returning();
     if (!row) {
       res.status(500).json({ error: "Insert failed" });
@@ -93,9 +100,16 @@ router.get("/inbox/:address", async (req, res) => {
     .from(inboxesTable)
     .where(eq(inboxesTable.address, address))
     .limit(1);
-  if (inbox && inbox.ownerApiKeyId !== null) {
-    res.status(404).json({ error: "Inbox not found" });
-    return;
+  if (inbox) {
+    const userId = (req as Request & { userId?: string }).userId ?? null;
+    if (inbox.ownerApiKeyId !== null) {
+      res.status(404).json({ error: "Inbox not found" });
+      return;
+    }
+    if (inbox.ownerUserId !== null && inbox.ownerUserId !== userId) {
+      res.status(404).json({ error: "Inbox not found" });
+      return;
+    }
   }
   if (!inbox) {
     // Allow viewing addresses that received mail but were never explicitly created
@@ -149,18 +163,32 @@ router.get("/inbox/:address", async (req, res) => {
   });
 });
 
-async function isApiOwnedAddress(address: string): Promise<boolean> {
+/**
+ * Returns true if the inbox exists AND is owned by someone other than the
+ * currently signed-in user (either an API key, or a different account user).
+ * Public inbox routes use this to short-circuit with 404 — no existence oracle.
+ */
+async function isOwnedByOther(req: Request, address: string): Promise<boolean> {
   const [row] = await db
-    .select({ owner: inboxesTable.ownerApiKeyId })
+    .select({
+      apiKeyOwner: inboxesTable.ownerApiKeyId,
+      userOwner: inboxesTable.ownerUserId,
+    })
     .from(inboxesTable)
     .where(eq(inboxesTable.address, address))
     .limit(1);
-  return !!row && row.owner !== null;
+  if (!row) return false;
+  if (row.apiKeyOwner !== null) return true;
+  if (row.userOwner !== null) {
+    const userId = (req as Request & { userId?: string }).userId ?? null;
+    if (row.userOwner !== userId) return true;
+  }
+  return false;
 }
 
 router.delete("/inbox/:address", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
-  if (await isApiOwnedAddress(address)) {
+  if (await isOwnedByOther(req, address)) {
     res.status(404).json({ error: "Inbox not found" });
     return;
   }
@@ -176,7 +204,7 @@ router.delete("/inbox/:address/emails/:id", async (req, res) => {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
-  if (await isApiOwnedAddress(address)) {
+  if (await isOwnedByOther(req, address)) {
     res.status(404).json({ error: "Email not found" });
     return;
   }
@@ -193,7 +221,7 @@ router.delete("/inbox/:address/emails/:id", async (req, res) => {
 
 router.post("/inbox/:address/refresh", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
-  if (await isApiOwnedAddress(address)) {
+  if (await isOwnedByOther(req, address)) {
     res.status(404).json({ error: "Inbox not found" });
     return;
   }
@@ -227,7 +255,7 @@ router.get("/inbox/:address/stream", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
   const ip = (req.ip || req.socket.remoteAddress || "unknown").toString();
 
-  if (await isApiOwnedAddress(address)) {
+  if (await isOwnedByOther(req, address)) {
     res.status(404).json({ error: "Inbox not found" });
     return;
   }

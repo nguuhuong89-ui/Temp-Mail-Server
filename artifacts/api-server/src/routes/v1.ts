@@ -18,6 +18,10 @@ function ownerId(req: Request): number {
   return (req as Request & { apiKeyId?: number }).apiKeyId!;
 }
 
+function ownerUserId(req: Request): string | null {
+  return (req as Request & { apiKeyUserId?: string | null }).apiKeyUserId ?? null;
+}
+
 async function loadOwnedInbox(address: string, owner: number) {
   const [row] = await db
     .select()
@@ -58,6 +62,15 @@ router.post("/v1/inboxes", async (req, res) => {
     if (d.status !== "active") {
       res.status(400).json({ error: "Domain not active" });
       return;
+    }
+    // Private (custom) domains may only be used by the API key whose owner
+    // verified the domain.
+    if (!d.isPublic) {
+      const u = ownerUserId(req);
+      if (!u || d.userId !== u) {
+        res.status(403).json({ error: "Domain not available" });
+        return;
+      }
     }
     domain = d.name;
   } else {
@@ -203,16 +216,23 @@ router.delete("/v1/inboxes/:address/emails/:id", async (req, res) => {
   res.status(204).end();
 });
 
-router.get("/v1/domains", async (_req, res) => {
+router.get("/v1/domains", async (req, res) => {
+  const u = ownerUserId(req);
   const rows = await db
     .select({
       name: domainsTable.name,
       status: domainsTable.status,
       isPublic: domainsTable.isPublic,
+      userId: domainsTable.userId,
     })
     .from(domainsTable)
     .where(eq(domainsTable.status, "active"));
-  res.json(rows);
+  // Hide private custom domains from other tenants — only the verified owner
+  // can see (and use) them.
+  const visible = rows
+    .filter((d) => d.isPublic || (u !== null && d.userId === u))
+    .map(({ userId: _userId, ...rest }) => rest);
+  res.json(visible);
 });
 
 function serializeInbox(row: typeof inboxesTable.$inferSelect) {

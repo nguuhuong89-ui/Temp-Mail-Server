@@ -7,6 +7,28 @@ TempMail — disposable/temporary email service (similar to temp-mail.io). pnpm 
 - `artifacts/api-server` (Express 5) — REST API at `/api` PLUS an embedded SMTP server (port `SMTP_PORT`, default 2525 dev / 25 docker) that receives mail, parses it via `mailparser`, stores it in Postgres, and broadcasts via in-process event bus to SSE subscribers at `GET /api/inbox/:address/stream`.
 - `artifacts/tempmail` (React + Vite) — end-user inbox UI at `/` (with QR-code share + per-email delete) and operator admin panel at `/admin/*` (dashboard, domains w/ per-domain webhook URL, emails, ads, blocklist, setup guide). Uses generated React Query hooks from `@workspace/api-client-react`.
 
+## Phase 5 — User accounts (Clerk) + Free/Pro plans
+
+- **Auth**: Clerk via `@clerk/express` (server) + `@clerk/react` (web). Provisioned via `setupClerkWhitelabelAuth`. Clerk JS proxy at `/api/__clerk` is enabled in BOTH dev and prod (the whitelabel publishable key requires the proxy in dev too — `clerkProxyMiddleware` no longer short-circuits in dev).
+- **Frontend Clerk wiring**: `App.tsx` wraps Wouter with `<ClerkProvider>` using `publishableKeyFromHost`, `routerPush/Replace` adapters, shadcn theme + Tailwind v4 `cssLayerName: "clerk"` (layer order set in `index.css`, `tailwindcss({ optimize: false })` in vite). `<Show when="signed-in"|"signed-out">` is the @clerk/react v6 idiom (NOT `SignedIn/SignedOut`).
+- **DB**: new `usersTable` (id = Clerk userId, email, plan default 'free', role default 'user'). `apiKeysTable.userId`, `domainsTable.userId/verificationToken/verifiedAt`, `inboxesTable.ownerUserId` added.
+- **Middleware** (`middlewares/clerk-auth.ts`): `attachUser` resolves Clerk session → upserts user row (auto-promotes to admin/pro if email is in `ADMIN_EMAILS` env list) → caches `{plan, role}` for 30s. `requireUser`, `requirePro`, `requireAdmin` build on it. `invalidateUserCache(userId)` called when admin patches a user.
+- **Account routes** (`routes/account.ts`, all under `/api/account`):
+  - `GET /me` (any signed-in user): returns plan/role/email.
+  - `GET|POST|POST :id/revoke|DELETE :id /api-keys` — Pro-only, scoped to `userId`.
+  - `GET /inboxes`, `DELETE /inboxes/:address` — any signed-in user.
+  - `GET|POST /domains`, `POST /domains/:id/verify`, `DELETE /domains/:id` — Pro-only.
+- **DNS verify** (`lib/domain-verify.ts`): `resolveTxt(domain)` looking for `tempmail-verify=<token>`. New domains start `status='pending'`, `isPublic=false`, become `'active'` after successful verify (also invalidates domain cache).
+- **Admin routes** (`routes/admin-users.ts` mounted at `/api/admin` behind `attachUser + requireAdmin`): `GET /users` (with apiKey/inbox/domain counts), `PATCH /users/:id` (plan: free|pro, role: user|admin).
+- **Inbox tagging**: `POST /api/inbox/random` and `/custom` now read `req.userId` from `attachUser` and tag `inboxes.ownerUserId`. So signed-in users automatically get inbox history.
+- **Tenant isolation** (HARDENED, post-review):
+  - Public `/api/inbox/:address` (GET/DELETE/refresh/stream) shortcut to 404 if the inbox is owned by an API key OR by a different signed-in user (`isOwnedByOther(req)` — no existence oracle).
+  - `/api/inbox/custom` rejects (403) creation on a private (`isPublic=false`) custom domain unless `req.userId === domain.userId`.
+  - `apiKeyAuth` now also exposes `req.apiKeyUserId`. `POST /api/v1/inboxes` rejects (403) using a private domain owned by a different user. `GET /api/v1/domains` filters out `isPublic=false` rows for non-owners and never leaks `userId` in the response.
+- **Frontend pages**: `/sign-in`, `/sign-up`, `/account` (overview), `/account/inboxes`, `/account/api-keys` (Pro gate), `/account/domains` (Pro gate w/ TXT instructions + verify button), `/account/plan`, `/admin/users`. Public layout shows `<UserButton/>` + Đăng nhập/Đăng ký. Home page shows "Đã lưu vào tài khoản" / "Đăng nhập để lưu lịch sử" badge.
+- **Legacy admin-token routes** (emails/domains/ads/blocklist/api-keys/stats) remain mounted after `adminAuth` for backward compat.
+- All UI strings in Vietnamese.
+
 ## Phase 4 — Public API for AI agents
 
 - **`POST /api/api-keys`** (admin): create key — plaintext returned ONCE (`tm_live_<48 hex>`). Stored as sha256 hash + 14-char prefix only.

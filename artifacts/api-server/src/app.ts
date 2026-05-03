@@ -3,6 +3,13 @@ import cors from "cors";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
+import { clerkMiddleware } from "@clerk/express";
+import { publishableKeyFromHost } from "@clerk/shared/keys";
+import {
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware,
+  getClerkProxyHost,
+} from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import authRouter from "./routes/auth";
 import { logger } from "./lib/logger";
@@ -29,10 +36,12 @@ app.use(
     },
   }),
 );
+
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
 app.use(cors());
 app.use(
   compression({
-    // Don't compress SSE — it breaks streaming.
     filter: (req, res) => {
       if (req.path.endsWith("/stream")) return false;
       return compression.filter(req, res);
@@ -41,6 +50,15 @@ app.use(
 );
 app.use(express.json({ limit: "256kb" }));
 app.use(express.urlencoded({ extended: true, limit: "256kb" }));
+
+app.use(
+  clerkMiddleware((req) => ({
+    publishableKey: publishableKeyFromHost(
+      getClerkProxyHost(req) ?? "",
+      process.env["CLERK_PUBLISHABLE_KEY"],
+    ),
+  })),
+);
 
 const inboxLimiter = rateLimit({
   windowMs: 60 * 1000,

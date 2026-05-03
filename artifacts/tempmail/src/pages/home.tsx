@@ -1,4 +1,6 @@
 import { PublicLayout } from "@/components/layout/public-layout";
+import { Show } from "@clerk/react";
+import { CloudCheck, CloudOff } from "lucide-react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useInboxStream } from "@/hooks/use-inbox-stream";
 import {
@@ -122,6 +124,18 @@ export default function Home() {
                       <Copy className="h-6 w-6" />
                     </Button>
                   </div>
+                </div>
+                <div className="text-xs">
+                  <Show when="signed-in">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200" data-testid="badge-saved">
+                      <CloudCheck className="h-3 w-3" /> Đã lưu vào tài khoản
+                    </span>
+                  </Show>
+                  <Show when="signed-out">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                      <CloudOff className="h-3 w-3" /> <Link href="/sign-in" className="underline hover:text-foreground">Đăng nhập</Link> để lưu lịch sử inbox
+                    </span>
+                  </Show>
                 </div>
                 {inbox && (
                   <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
