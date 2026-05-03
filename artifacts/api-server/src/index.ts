@@ -2,6 +2,9 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startSmtpServer } from "./lib/smtp";
 import { startCleanupJob } from "./lib/cleanup";
+import { assertProductionAdminConfig } from "./middlewares/admin-auth";
+
+assertProductionAdminConfig();
 
 const rawPort = process.env["PORT"];
 

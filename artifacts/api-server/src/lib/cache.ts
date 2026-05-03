@@ -25,7 +25,10 @@ export class TtlCache<K, V> {
 }
 
 export class SingletonCache<V> {
-  private cached: { value: V; expiresAt: number } | null = null;
+  private cached: { value: V; expiresAt: number; generation: number } | null = null;
+  private inflight: { promise: Promise<V>; generation: number } | null = null;
+  private generation = 0;
+
   constructor(
     private ttlMs: number,
     private loader: () => Promise<V>,
@@ -34,12 +37,28 @@ export class SingletonCache<V> {
   async get(): Promise<V> {
     const now = Date.now();
     if (this.cached && this.cached.expiresAt > now) return this.cached.value;
-    const value = await this.loader();
-    this.cached = { value, expiresAt: now + this.ttlMs };
-    return value;
+    if (this.inflight) return this.inflight.promise;
+    const gen = this.generation;
+    const promise = (async () => {
+      try {
+        const value = await this.loader();
+        // Drop stale results if invalidate() bumped generation while loading.
+        if (gen === this.generation) {
+          this.cached = { value, expiresAt: Date.now() + this.ttlMs, generation: gen };
+        }
+        return value;
+      } finally {
+        if (this.inflight && this.inflight.generation === gen) {
+          this.inflight = null;
+        }
+      }
+    })();
+    this.inflight = { promise, generation: gen };
+    return promise;
   }
 
   invalidate(): void {
     this.cached = null;
+    this.generation++;
   }
 }

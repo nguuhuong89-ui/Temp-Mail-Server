@@ -172,8 +172,30 @@ router.post("/inbox/:address/refresh", async (req, res) => {
   });
 });
 
+// Per-IP and global concurrent SSE connection caps to prevent socket/event-loop
+// exhaustion via unbounded long-lived streams.
+const MAX_SSE_PER_IP = Number(process.env["SSE_MAX_PER_IP"] ?? 5);
+const MAX_SSE_TOTAL = Number(process.env["SSE_MAX_TOTAL"] ?? 2000);
+const SSE_IDLE_TIMEOUT_MS = Number(process.env["SSE_IDLE_TIMEOUT_MS"] ?? 30 * 60 * 1000);
+const sseConnectionsByIp = new Map<string, number>();
+let sseTotalConnections = 0;
+
 router.get("/inbox/:address/stream", (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
+  const ip = (req.ip || req.socket.remoteAddress || "unknown").toString();
+
+  if (sseTotalConnections >= MAX_SSE_TOTAL) {
+    res.status(503).json({ error: "Server SSE capacity reached" });
+    return;
+  }
+  const ipCount = sseConnectionsByIp.get(ip) ?? 0;
+  if (ipCount >= MAX_SSE_PER_IP) {
+    res.status(429).json({ error: "Too many active streams from this client" });
+    return;
+  }
+  sseConnectionsByIp.set(ip, ipCount + 1);
+  sseTotalConnections++;
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
@@ -188,12 +210,26 @@ router.get("/inbox/:address/stream", (req, res) => {
   const heartbeat = setInterval(() => {
     res.write(`: ping\n\n`);
   }, 25000);
+  const idleTimer = setTimeout(() => {
+    res.end();
+  }, SSE_IDLE_TIMEOUT_MS);
 
   emailBus.on(address, onEvent);
-  req.on("close", () => {
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
     clearInterval(heartbeat);
+    clearTimeout(idleTimer);
     emailBus.off(address, onEvent);
-  });
+    const remaining = (sseConnectionsByIp.get(ip) ?? 1) - 1;
+    if (remaining <= 0) sseConnectionsByIp.delete(ip);
+    else sseConnectionsByIp.set(ip, remaining);
+    sseTotalConnections = Math.max(0, sseTotalConnections - 1);
+  };
+  req.on("close", cleanup);
+  res.on("close", cleanup);
 });
 
 export default router;
