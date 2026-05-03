@@ -10,16 +10,27 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/30">
       <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="container max-w-5xl mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tight transition-colors hover:text-primary">
-            <Mail className="h-6 w-6 text-primary" />
+        <div className="container max-w-5xl mx-auto flex h-14 sm:h-16 items-center justify-between gap-2 px-3 sm:px-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2 font-bold text-lg sm:text-xl tracking-tight transition-colors hover:text-primary shrink-0"
+          >
+            <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             <span>TempMail</span>
           </Link>
-          <nav className="flex items-center gap-3">
+          <nav className="flex items-center gap-1 sm:gap-3">
             <Show when="signed-in">
               <Link href="/account">
-                <Button variant="ghost" size="sm" data-testid="link-account">
-                  <UserIcon className="h-4 w-4 mr-1" /> Tài khoản
+                {/* Icon-only on mobile, full label on sm+ */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-testid="link-account"
+                  className="px-2 sm:px-3"
+                  aria-label="Tài khoản"
+                >
+                  <UserIcon className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Tài khoản</span>
                 </Button>
               </Link>
               <UserButton
@@ -29,21 +40,28 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             </Show>
             <Show when="signed-out">
               <Link href="/sign-in">
-                <Button variant="ghost" size="sm" data-testid="link-signin">
-                  <LogIn className="h-4 w-4 mr-1" /> Đăng nhập
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-testid="link-signin"
+                  className="px-2 sm:px-3"
+                  aria-label="Đăng nhập"
+                >
+                  <LogIn className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Đăng nhập</span>
                 </Button>
               </Link>
               <Link href="/sign-up">
-                <Button size="sm" data-testid="link-signup">Đăng ký</Button>
+                <Button size="sm" data-testid="link-signup" className="px-3">
+                  Đăng ký
+                </Button>
               </Link>
             </Show>
             <ThemeToggle />
           </nav>
         </div>
       </header>
-      <main className="flex-1">
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
       <footer className="border-t py-6 md:py-0 border-border/40">
         <div className="container max-w-5xl mx-auto flex flex-col md:h-14 items-center justify-between gap-4 md:flex-row px-4">
           <p className="text-sm leading-loose text-muted-foreground">

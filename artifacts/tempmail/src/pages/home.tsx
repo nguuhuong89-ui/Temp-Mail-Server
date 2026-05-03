@@ -96,18 +96,18 @@ export default function Home() {
 
   return (
     <PublicLayout>
-      <div className="container max-w-5xl mx-auto px-4 py-12">
+      <div className="container max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-12">
         <AdRenderer placement="header" />
         
-        <div className="mt-8 text-center space-y-4">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight">Your Throwaway Inbox</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+        <div className="mt-4 sm:mt-8 text-center space-y-3 sm:space-y-4">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight">Your Throwaway Inbox</h1>
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto px-2">
             Keep your real inbox clean. Instantly receive verification codes, test emails, and avoid spam.
           </p>
         </div>
 
-        <div className="mt-12 bg-card border rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-6 md:p-12 border-b bg-muted/30 flex flex-col items-center justify-center gap-6">
+        <div className="mt-6 sm:mt-12 bg-card border rounded-2xl shadow-xl overflow-hidden">
+          <div className="p-4 sm:p-6 md:p-12 border-b bg-muted/30 flex flex-col items-center justify-center gap-4 sm:gap-6">
             {!address ? (
               <div className="flex flex-col items-center gap-4">
                 <Button size="lg" onClick={handleGenerate} disabled={createRandom.isPending} className="text-lg h-14 px-8 rounded-full">
@@ -118,10 +118,10 @@ export default function Home() {
             ) : (
               <>
                 <div className="flex items-center gap-4 w-full max-w-2xl">
-                  <div className="flex-1 bg-background border-2 border-primary/20 rounded-xl p-4 md:p-6 flex items-center justify-between group hover:border-primary/50 transition-colors cursor-pointer" onClick={handleCopy}>
-                    <span className="text-xl md:text-3xl font-bold truncate select-all font-mono">{address}</span>
-                    <Button variant="ghost" size="icon" className="shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
-                      <Copy className="h-6 w-6" />
+                  <div className="flex-1 min-w-0 bg-background border-2 border-primary/20 rounded-xl p-3 sm:p-4 md:p-6 flex items-center justify-between gap-2 group hover:border-primary/50 transition-colors cursor-pointer" onClick={handleCopy}>
+                    <span className="text-sm sm:text-xl md:text-3xl font-bold truncate select-all font-mono">{address}</span>
+                    <Button variant="ghost" size="icon" className="shrink-0 opacity-50 group-hover:opacity-100 transition-opacity h-8 w-8 sm:h-10 sm:w-10">
+                      <Copy className="h-4 w-4 sm:h-6 sm:w-6" />
                     </Button>
                   </div>
                 </div>
@@ -181,7 +181,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-4 min-h-[400px]">
-            <div className="lg:col-span-3 p-4 md:p-6 flex flex-col">
+            <div className="lg:col-span-3 p-3 sm:p-4 md:p-6 flex flex-col">
               <AdRenderer placement="inbox_top" />
               
               <div className="mt-4 flex-1">
@@ -201,7 +201,7 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {inbox.emails.map((email, i) => (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
@@ -210,14 +210,14 @@ export default function Home() {
                         key={email.id}
                       >
                         <Link href={`/email/${email.id}`} className="block group">
-                          <div className="p-4 rounded-xl border bg-background hover:border-primary/50 hover:shadow-md transition-all flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+                          <div className="p-3 sm:p-4 rounded-xl border bg-background hover:border-primary/50 hover:shadow-md transition-all flex items-center gap-3 sm:gap-4">
+                            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
                               {email.fromAddress.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className="font-semibold truncate">{email.fromAddress}</span>
-                                <span className="text-xs text-muted-foreground shrink-0">
+                              <div className="flex items-center justify-between gap-2 mb-0.5 sm:mb-1">
+                                <span className="font-semibold truncate text-sm sm:text-base">{email.fromAddress}</span>
+                                <span className="text-[11px] sm:text-xs text-muted-foreground shrink-0">
                                   {formatDistanceToNow(new Date(email.receivedAt), { addSuffix: true })}
                                 </span>
                               </div>
@@ -225,7 +225,7 @@ export default function Home() {
                                 <span className="font-medium text-sm truncate">{email.subject || "No Subject"}</span>
                                 {email.hasAttachments && <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />}
                               </div>
-                              <p className="text-xs text-muted-foreground truncate mt-1">
+                              <p className="text-xs text-muted-foreground truncate mt-1 hidden sm:block">
                                 {email.preview}
                               </p>
                             </div>
@@ -233,12 +233,12 @@ export default function Home() {
                               variant="ghost"
                               size="icon"
                               onClick={(e) => handleDeleteEmail(e, email.id)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+                              className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0 h-8 w-8 sm:h-10 sm:w-10"
                               aria-label="Delete email"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                            <ChevronRight className="hidden sm:block h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                           </div>
                         </Link>
                       </motion.div>
@@ -248,7 +248,9 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="border-t lg:border-t-0 lg:border-l bg-muted/10 p-4">
+            {/* Sidebar ad column — hidden on mobile to save vertical space.
+                AdRenderer returns null when no ad is configured. */}
+            <div className="hidden lg:block border-l bg-muted/10 p-4">
               <div className="sticky top-24">
                 <AdRenderer placement="sidebar" />
               </div>
