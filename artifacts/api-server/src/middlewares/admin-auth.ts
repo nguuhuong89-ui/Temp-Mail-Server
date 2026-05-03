@@ -1,16 +1,23 @@
 import type { Request, Response, NextFunction } from "express";
 
-export function adminAuth(req: Request, res: Response, next: NextFunction): void {
+export function isAdminAuthConfigured(): boolean {
+  return Boolean(process.env["ADMIN_TOKEN"]);
+}
+
+export function checkAdminToken(provided: string | undefined): boolean {
   const expected = process.env["ADMIN_TOKEN"];
-  if (!expected) {
-    // Development convenience: if no token configured, allow through but warn once.
-    next();
-    return;
-  }
+  if (!expected) return true; // dev mode: no token configured
+  return Boolean(provided) && provided === expected;
+}
+
+function extractToken(req: Request): string {
   const header = req.header("x-admin-token") ?? "";
   const bearer = (req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  const provided = header || bearer;
-  if (provided && provided === expected) {
+  return header || bearer;
+}
+
+export function adminAuth(req: Request, res: Response, next: NextFunction): void {
+  if (checkAdminToken(extractToken(req))) {
     next();
     return;
   }

@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startSmtpServer } from "./lib/smtp";
+import { startCleanupJob } from "./lib/cleanup";
 
 const rawPort = process.env["PORT"];
 
@@ -32,3 +33,5 @@ if (!Number.isNaN(smtpPort) && smtpPort > 0) {
     logger.error({ err, smtpPort }, "Failed to start SMTP server");
   }
 }
+
+startCleanupJob();

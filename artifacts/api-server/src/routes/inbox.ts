@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, inboxesTable, emailsTable, domainsTable } from "@workspace/db";
-import { and, eq, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import {
   generateLocalPart,
   generateToken,
@@ -8,32 +8,12 @@ import {
   isValidLocalPart,
 } from "../lib/inbox-utils";
 import { emailBus, type EmailEvent } from "../lib/events";
+import { ensureDefaultDomain, lookupDomain } from "../lib/domain-cache";
 
 const router: IRouter = Router();
 
-async function pickRandomActiveDomain(): Promise<string | null> {
-  const rows = await db
-    .select({ name: domainsTable.name })
-    .from(domainsTable)
-    .where(and(eq(domainsTable.status, "active"), eq(domainsTable.isPublic, true)));
-  if (rows.length === 0) return null;
-  const idx = Math.floor(Math.random() * rows.length);
-  return rows[idx]!.name;
-}
-
-async function ensureDefaultDomain(): Promise<string> {
-  const existing = await pickRandomActiveDomain();
-  if (existing) return existing;
-  const fallback = process.env["MAIL_DOMAIN"] ?? "tempmail.local";
-  await db
-    .insert(domainsTable)
-    .values({ name: fallback, status: "active", isPublic: true })
-    .onConflictDoNothing();
-  return fallback;
-}
-
 router.post("/inbox/random", async (_req, res) => {
-  const domain = await ensureDefaultDomain();
+  const domain = await ensureDefaultDomain(process.env["MAIL_DOMAIN"] ?? "tempmail.local");
   for (let attempt = 0; attempt < 5; attempt++) {
     const local = generateLocalPart();
     const address = `${local}@${domain}`.toLowerCase();
@@ -82,6 +62,7 @@ router.post("/inbox/custom", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Domain not active" });
     return;
   }
+  void lookupDomain;
   const address = `${localPart}@${domain.name}`.toLowerCase();
   const token = generateToken();
   const expiresAt = defaultExpiry();

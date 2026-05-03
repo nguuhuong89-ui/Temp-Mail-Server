@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, domainsTable, emailsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { resolveMx } from "node:dns/promises";
+import { invalidateDomainCache } from "../lib/domain-cache";
 
 const router: IRouter = Router();
 
@@ -47,6 +48,7 @@ router.post("/domains", async (req, res) => {
       res.status(500).json({ error: "Insert failed" });
       return;
     }
+    invalidateDomainCache();
     res.status(201).json({
       id: row.id,
       name: row.name,
@@ -83,6 +85,7 @@ router.patch("/domains/:id", async (req, res) => {
     res.status(404).json({ error: "Domain not found" });
     return;
   }
+  invalidateDomainCache();
   res.json({
     id: row.id,
     name: row.name,
@@ -100,6 +103,7 @@ router.delete("/domains/:id", async (req, res) => {
     return;
   }
   await db.delete(domainsTable).where(eq(domainsTable.id, id));
+  invalidateDomainCache();
   res.status(204).end();
 });
 

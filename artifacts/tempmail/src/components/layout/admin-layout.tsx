@@ -1,8 +1,17 @@
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, Globe, Mail, Megaphone, Settings, ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
+import { AdminGate, AdminLogoutButton } from "@/components/admin-gate";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AdminGate>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </AdminGate>
+  );
+}
+
+function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
 
   const nav = [
@@ -41,12 +50,15 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
         </div>
-        <div className="p-4 border-t flex items-center justify-between">
-          <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-            Back to App
-          </Link>
-          <ThemeToggle />
+        <div className="p-4 border-t flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+              Back to App
+            </Link>
+            <ThemeToggle />
+          </div>
+          <AdminLogoutButton />
         </div>
       </aside>
       <main className="flex-1 p-6 md:p-8 overflow-auto">

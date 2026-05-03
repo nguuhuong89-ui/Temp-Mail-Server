@@ -1,10 +1,10 @@
 import { SMTPServer } from "smtp-server";
 import { simpleParser } from "mailparser";
-import { db, emailsTable, domainsTable, inboxesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, emailsTable, inboxesTable } from "@workspace/db";
 import { logger } from "./logger";
 import { emitEmailReceived } from "./events";
 import { defaultExpiry, generateToken, makePreview } from "./inbox-utils";
+import { lookupDomain } from "./domain-cache";
 
 export function startSmtpServer(port: number): SMTPServer {
   const server = new SMTPServer({
@@ -17,12 +17,8 @@ export function startSmtpServer(port: number): SMTPServer {
         callback(new Error("550 Invalid recipient"));
         return;
       }
-      db.select()
-        .from(domainsTable)
-        .where(eq(domainsTable.name, domainName))
-        .limit(1)
-        .then((rows) => {
-          const d = rows[0];
+      lookupDomain(domainName)
+        .then((d) => {
           if (!d || d.status !== "active") {
             callback(new Error("550 Recipient domain not served"));
             return;
@@ -53,11 +49,7 @@ export function startSmtpServer(port: number): SMTPServer {
           for (const rcpt of session.envelope.rcptTo) {
             const toAddress = rcpt.address.toLowerCase();
             const domainName = toAddress.split("@")[1] ?? "";
-            const [domain] = await db
-              .select()
-              .from(domainsTable)
-              .where(eq(domainsTable.name, domainName))
-              .limit(1);
+            const domain = await lookupDomain(domainName);
             if (!domain || domain.status !== "active") {
               logger.warn({ toAddress }, "Rejected mail for inactive/unknown domain");
               continue;
