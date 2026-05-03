@@ -41,6 +41,10 @@ router.patch("/users/:id", async (req, res) => {
     res.status(400).json({ error: "Nothing to update" });
     return;
   }
+  // Invariant: admin role always implies pro plan, so the system stays
+  // consistent (admins need API/custom domains to operate).
+  if (patch["role"] === "admin") patch["plan"] = "pro";
+  // If demoting an admin to user without specifying plan, leave plan as-is.
   const [row] = await db
     .update(usersTable)
     .set(patch)

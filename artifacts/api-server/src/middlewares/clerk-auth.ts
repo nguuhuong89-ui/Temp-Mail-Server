@@ -29,8 +29,11 @@ async function loadOrCreateUser(userId: string): Promise<{ plan: string; role: s
     .limit(1);
 
   if (existing) {
-    userCache.set(userId, { ...existing, expires: now + USER_TTL_MS });
-    return existing;
+    // Invariant: admin role implies pro plan.
+    const plan = existing.role === "admin" ? "pro" : existing.plan;
+    const result = { plan, role: existing.role };
+    userCache.set(userId, { ...result, expires: now + USER_TTL_MS });
+    return result;
   }
 
   let email: string | null = null;

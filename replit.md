@@ -13,6 +13,7 @@ TempMail — disposable/temporary email service (similar to temp-mail.io). pnpm 
 - **Frontend Clerk wiring**: `App.tsx` wraps Wouter with `<ClerkProvider>` using `publishableKeyFromHost`, `routerPush/Replace` adapters, shadcn theme + Tailwind v4 `cssLayerName: "clerk"` (layer order set in `index.css`, `tailwindcss({ optimize: false })` in vite). `<Show when="signed-in"|"signed-out">` is the @clerk/react v6 idiom (NOT `SignedIn/SignedOut`).
 - **DB**: new `usersTable` (id = Clerk userId, email, plan default 'free', role default 'user'). `apiKeysTable.userId`, `domainsTable.userId/verificationToken/verifiedAt`, `inboxesTable.ownerUserId` added.
 - **Middleware** (`middlewares/clerk-auth.ts`): `attachUser` resolves Clerk session → upserts user row (auto-promotes to admin/pro if email is in `ADMIN_EMAILS` env list) → caches `{plan, role}` for 30s. `requireUser`, `requirePro`, `requireAdmin` build on it. `invalidateUserCache(userId)` called when admin patches a user.
+- **Invariant**: `role='admin'` always implies `plan='pro'`. Enforced in three places: (a) auto-promote on first login, (b) `attachUser` coerces in-memory plan to `'pro'` for any admin row, (c) `PATCH /api/admin/users/:id` forces `plan='pro'` when `role='admin'` is set.
 - **Account routes** (`routes/account.ts`, all under `/api/account`):
   - `GET /me` (any signed-in user): returns plan/role/email.
   - `GET|POST|POST :id/revoke|DELETE :id /api-keys` — Pro-only, scoped to `userId`.
