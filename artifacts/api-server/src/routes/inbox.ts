@@ -93,6 +93,10 @@ router.get("/inbox/:address", async (req, res) => {
     .from(inboxesTable)
     .where(eq(inboxesTable.address, address))
     .limit(1);
+  if (inbox && inbox.ownerApiKeyId !== null) {
+    res.status(404).json({ error: "Inbox not found" });
+    return;
+  }
   if (!inbox) {
     // Allow viewing addresses that received mail but were never explicitly created
     const anyMail = await db
@@ -145,8 +149,21 @@ router.get("/inbox/:address", async (req, res) => {
   });
 });
 
+async function isApiOwnedAddress(address: string): Promise<boolean> {
+  const [row] = await db
+    .select({ owner: inboxesTable.ownerApiKeyId })
+    .from(inboxesTable)
+    .where(eq(inboxesTable.address, address))
+    .limit(1);
+  return !!row && row.owner !== null;
+}
+
 router.delete("/inbox/:address", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
+  if (await isApiOwnedAddress(address)) {
+    res.status(404).json({ error: "Inbox not found" });
+    return;
+  }
   await db.delete(emailsTable).where(eq(emailsTable.toAddress, address));
   await db.delete(inboxesTable).where(eq(inboxesTable.address, address));
   res.status(204).end();
@@ -157,6 +174,10 @@ router.delete("/inbox/:address/emails/:id", async (req, res) => {
   const id = Number(req.params["id"]);
   if (Number.isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  if (await isApiOwnedAddress(address)) {
+    res.status(404).json({ error: "Email not found" });
     return;
   }
   const result = await db
@@ -172,6 +193,10 @@ router.delete("/inbox/:address/emails/:id", async (req, res) => {
 
 router.post("/inbox/:address/refresh", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
+  if (await isApiOwnedAddress(address)) {
+    res.status(404).json({ error: "Inbox not found" });
+    return;
+  }
   const newExpiry = defaultExpiry();
   const [updated] = await db
     .update(inboxesTable)
@@ -198,10 +223,14 @@ const SSE_IDLE_TIMEOUT_MS = Number(process.env["SSE_IDLE_TIMEOUT_MS"] ?? 30 * 60
 const sseConnectionsByIp = new Map<string, number>();
 let sseTotalConnections = 0;
 
-router.get("/inbox/:address/stream", (req, res) => {
+router.get("/inbox/:address/stream", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
   const ip = (req.ip || req.socket.remoteAddress || "unknown").toString();
 
+  if (await isApiOwnedAddress(address)) {
+    res.status(404).json({ error: "Inbox not found" });
+    return;
+  }
   if (sseTotalConnections >= MAX_SSE_TOTAL) {
     res.status(503).json({ error: "Server SSE capacity reached" });
     return;

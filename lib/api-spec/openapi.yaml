@@ -14,6 +14,7 @@ tags:
   - name: ads
   - name: stats
   - name: blocklist
+  - name: apiKeys
 paths:
   /healthz:
     get:
@@ -549,6 +550,76 @@ paths:
         "204":
           description: Deleted
 
+  /api-keys:
+    get:
+      operationId: listApiKeys
+      tags: [apiKeys]
+      summary: List API keys
+      responses:
+        "200":
+          description: Keys
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiKey"
+    post:
+      operationId: createApiKey
+      tags: [apiKeys]
+      summary: Create a new API key (plaintext returned ONCE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyWithSecret"
+
+  /api-keys/{id}/revoke:
+    post:
+      operationId: revokeApiKey
+      tags: [apiKeys]
+      summary: Revoke an API key (cannot be used again)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+
+  /api-keys/{id}:
+    delete:
+      operationId: deleteApiKey
+      tags: [apiKeys]
+      summary: Permanently delete an API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
   /stats/timeseries:
     get:
       operationId: getEmailTimeseries
@@ -671,6 +742,35 @@ components:
           type: ["string", "null"]
         emailCount:
           type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiKey:
+      type: object
+      required: [id, name, prefix, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        prefix: { type: string }
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: ["string", "null"]
+          format: date-time
+        revokedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    ApiKeyWithSecret:
+      type: object
+      required: [id, name, prefix, plaintext, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        prefix: { type: string }
+        plaintext: { type: string }
         createdAt:
           type: string
           format: date-time

@@ -12,6 +12,8 @@ import Domains from "@/pages/admin/domains";
 import EmailsExplorer from "@/pages/admin/emails";
 import Ads from "@/pages/admin/ads";
 import Blocklist from "@/pages/admin/blocklist";
+import ApiKeys from "@/pages/admin/api-keys";
+import ApiDocs from "@/pages/admin/api-docs";
 import SetupGuide from "@/pages/admin/setup";
 
 const queryClient = new QueryClient({
@@ -35,6 +37,8 @@ function Router() {
       <Route path="/admin/emails" component={EmailsExplorer} />
       <Route path="/admin/ads" component={Ads} />
       <Route path="/admin/blocklist" component={Blocklist} />
+      <Route path="/admin/api-keys" component={ApiKeys} />
+      <Route path="/admin/api-docs" component={ApiDocs} />
       <Route path="/admin/setup" component={SetupGuide} />
       
       <Route component={NotFound} />

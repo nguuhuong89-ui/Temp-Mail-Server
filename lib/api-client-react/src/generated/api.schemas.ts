@@ -67,6 +67,25 @@ export interface Domain {
   createdAt: string;
 }
 
+export interface ApiKey {
+  id: number;
+  name: string;
+  prefix: string;
+  createdAt: string;
+  /** @nullable */
+  lastUsedAt?: string | null;
+  /** @nullable */
+  revokedAt?: string | null;
+}
+
+export interface ApiKeyWithSecret {
+  id: number;
+  name: string;
+  prefix: string;
+  plaintext: string;
+  createdAt: string;
+}
+
 export type BlocklistEntryType =
   (typeof BlocklistEntryType)[keyof typeof BlocklistEntryType];
 
@@ -233,4 +252,12 @@ export type CreateBlocklistEntryBody = {
   pattern: string;
   type?: CreateBlocklistEntryBodyType;
   note?: string;
+};
+
+export type CreateApiKeyBody = {
+  name: string;
+};
+
+export type RevokeApiKey200 = {
+  ok?: boolean;
 };

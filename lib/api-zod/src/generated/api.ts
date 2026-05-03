@@ -355,6 +355,44 @@ export const DeleteBlocklistEntryParams = zod.object({
 });
 
 /**
+ * @summary List API keys
+ */
+export const ListApiKeysResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  prefix: zod.string(),
+  createdAt: zod.coerce.date(),
+  lastUsedAt: zod.coerce.date().nullish(),
+  revokedAt: zod.coerce.date().nullish(),
+});
+export const ListApiKeysResponse = zod.array(ListApiKeysResponseItem);
+
+/**
+ * @summary Create a new API key (plaintext returned ONCE)
+ */
+export const CreateApiKeyBody = zod.object({
+  name: zod.string(),
+});
+
+/**
+ * @summary Revoke an API key (cannot be used again)
+ */
+export const RevokeApiKeyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RevokeApiKeyResponse = zod.object({
+  ok: zod.boolean().optional(),
+});
+
+/**
+ * @summary Permanently delete an API key
+ */
+export const DeleteApiKeyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary Email volume over the last 24 hours, bucketed hourly
  */
 export const GetEmailTimeseriesResponseItem = zod.object({

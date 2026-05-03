@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Globe, Mail, Megaphone, Settings, ArrowLeft, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, Globe, Mail, Megaphone, Settings, ArrowLeft, ShieldAlert, Key, Code2 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { AdminGate, AdminLogoutButton } from "@/components/admin-gate";
 
@@ -20,6 +20,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     { href: "/admin/emails", label: "Emails", icon: Mail },
     { href: "/admin/ads", label: "Campaigns", icon: Megaphone },
     { href: "/admin/blocklist", label: "Blocklist", icon: ShieldAlert },
+    { href: "/admin/api-keys", label: "API Keys", icon: Key },
+    { href: "/admin/api-docs", label: "API Docs", icon: Code2 },
     { href: "/admin/setup", label: "Setup Guide", icon: Settings },
   ];
 

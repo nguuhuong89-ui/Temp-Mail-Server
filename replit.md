@@ -7,6 +7,15 @@ TempMail — disposable/temporary email service (similar to temp-mail.io). pnpm 
 - `artifacts/api-server` (Express 5) — REST API at `/api` PLUS an embedded SMTP server (port `SMTP_PORT`, default 2525 dev / 25 docker) that receives mail, parses it via `mailparser`, stores it in Postgres, and broadcasts via in-process event bus to SSE subscribers at `GET /api/inbox/:address/stream`.
 - `artifacts/tempmail` (React + Vite) — end-user inbox UI at `/` (with QR-code share + per-email delete) and operator admin panel at `/admin/*` (dashboard, domains w/ per-domain webhook URL, emails, ads, blocklist, setup guide). Uses generated React Query hooks from `@workspace/api-client-react`.
 
+## Phase 4 — Public API for AI agents
+
+- **`POST /api/api-keys`** (admin): create key — plaintext returned ONCE (`tm_live_<48 hex>`). Stored as sha256 hash + 14-char prefix only.
+- **`POST /api/api-keys/:id/revoke`**, **`DELETE /api/api-keys/:id`** (admin).
+- **`/api/v1/*`** (auth via `X-API-Key` or `Authorization: Bearer`): `POST /v1/inboxes` (random or specific localPart+domain, optional `ttlMinutes` 1–10080), `GET /v1/inboxes`, `GET|DELETE /v1/inboxes/:address`, `GET /v1/inboxes/:address/emails?limit=`, `GET|DELETE /v1/inboxes/:address/emails/:id`, `GET /v1/domains`.
+- **Object-level auth**: each inbox stores `ownerApiKeyId`. `/v1/*` routes use `loadOwnedInbox()` which returns a uniform 404 when an inbox does not exist OR is owned by a different key (no existence oracle). Legacy public `/api/inbox/:address[*]` routes also short-circuit with 404 if `ownerApiKeyId IS NOT NULL`, so API-owned inboxes can NEVER be read/deleted/refreshed/streamed via the unauthenticated user surface.
+- **Auth middleware** (`lib/api-key-auth.ts`): scoped `router.use("/v1", apiKeyAuth)` so it does NOT block admin routes; uses `crypto.timingSafeEqual` for hash comparison; debounced `lastUsedAt` writes (60s).
+- **Admin UI**: `/admin/api-keys` (create + revoke + delete with one-time secret display) and `/admin/api-docs` (cURL/JS/Python quickstart with copy-to-clipboard).
+
 ## Phase 3 modules (admin extras)
 
 - **Blocklist** (`/api/blocklist`, admin-gated): sender or domain match; cached in-memory and consulted in `smtp.ts` to drop incoming mail before persistence. Cache invalidated on create/delete.
