@@ -2,7 +2,13 @@ import { db, domainsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { SingletonCache } from "./cache";
 
-export type CachedDomain = { id: number; name: string; status: string; isPublic: boolean };
+export type CachedDomain = {
+  id: number;
+  name: string;
+  status: string;
+  isPublic: boolean;
+  webhookUrl: string | null;
+};
 
 const allDomainsCache = new SingletonCache<Map<string, CachedDomain>>(30_000, async () => {
   const rows = await db.select().from(domainsTable);
@@ -13,6 +19,7 @@ const allDomainsCache = new SingletonCache<Map<string, CachedDomain>>(30_000, as
       name: r.name,
       status: r.status,
       isPublic: r.isPublic,
+      webhookUrl: r.webhookUrl ?? null,
     });
   }
   return m;

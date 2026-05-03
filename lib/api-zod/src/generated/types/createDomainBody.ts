@@ -9,4 +9,6 @@
 export type CreateDomainBody = {
   name: string;
   isPublic?: boolean;
+  /** @nullable */
+  webhookUrl?: string | null;
 };

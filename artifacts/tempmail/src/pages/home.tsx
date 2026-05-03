@@ -1,14 +1,15 @@
 import { PublicLayout } from "@/components/layout/public-layout";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useInboxStream } from "@/hooks/use-inbox-stream";
-import { 
-  useCreateRandomInbox, 
-  useGetInbox, 
+import {
+  useCreateRandomInbox,
+  useGetInbox,
   useExtendInbox,
-  getGetInboxQueryKey
+  useDeleteInboxEmail,
+  getGetInboxQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { Copy, RefreshCw, Clock, Inbox as InboxIcon, ChevronRight, Paperclip, Mail } from "lucide-react";
+import { Copy, RefreshCw, Clock, Inbox as InboxIcon, ChevronRight, Paperclip, Mail, QrCode, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdRenderer } from "@/components/ad-renderer";
 import { Countdown } from "@/components/countdown";
@@ -16,7 +17,9 @@ import { Link, useParams } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function Home() {
   const params = useParams();
@@ -32,6 +35,8 @@ export default function Home() {
 
   const createRandom = useCreateRandomInbox();
   const extend = useExtendInbox();
+  const deleteEmail = useDeleteInboxEmail();
+  const [qrOpen, setQrOpen] = useState(false);
 
   useInboxStream(address || undefined);
 
@@ -57,6 +62,21 @@ export default function Home() {
       title: "Address copied",
       description: "Copied to clipboard successfully.",
     });
+  };
+
+  const handleDeleteEmail = (e: React.MouseEvent, id: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!address) return;
+    deleteEmail.mutate(
+      { address, id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetInboxQueryKey(address) });
+          toast({ title: "Email deleted" });
+        },
+      },
+    );
   };
 
   const handleExtend = () => {
@@ -116,6 +136,30 @@ export default function Home() {
                     <Button variant="outline" size="sm" onClick={handleGenerate} className="rounded-full">
                       Generate New
                     </Button>
+                    <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="rounded-full">
+                          <QrCode className="mr-2 h-3 w-3" /> Share QR
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-sm">
+                        <DialogHeader>
+                          <DialogTitle>Scan to open this inbox</DialogTitle>
+                        </DialogHeader>
+                        <div className="flex flex-col items-center gap-4 pt-2">
+                          <div className="bg-white p-4 rounded-xl border">
+                            <QRCodeSVG
+                              value={`${window.location.origin}${import.meta.env.BASE_URL}inbox/${address}`}
+                              size={220}
+                              level="M"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground font-mono break-all text-center">
+                            {address}
+                          </p>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 )}
               </>
@@ -171,6 +215,15 @@ export default function Home() {
                                 {email.preview}
                               </p>
                             </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => handleDeleteEmail(e, email.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+                              aria-label="Delete email"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                             <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                           </div>
                         </Link>

@@ -71,6 +71,14 @@ export const DeleteInboxParams = zod.object({
 });
 
 /**
+ * @summary Delete a single email from your inbox
+ */
+export const DeleteInboxEmailParams = zod.object({
+  address: zod.coerce.string(),
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary Extend inbox expiry by 10 minutes
  */
 export const ExtendInboxParams = zod.object({
@@ -139,6 +147,7 @@ export const ListDomainsResponseItem = zod.object({
   name: zod.string(),
   status: zod.enum(["active", "paused", "blocked"]),
   isPublic: zod.boolean(),
+  webhookUrl: zod.string().nullish(),
   emailCount: zod.number(),
   createdAt: zod.coerce.date(),
 });
@@ -152,6 +161,7 @@ export const createDomainBodyIsPublicDefault = true;
 export const CreateDomainBody = zod.object({
   name: zod.string(),
   isPublic: zod.boolean().default(createDomainBodyIsPublicDefault),
+  webhookUrl: zod.string().nullish(),
 });
 
 /**
@@ -164,6 +174,7 @@ export const UpdateDomainParams = zod.object({
 export const UpdateDomainBody = zod.object({
   status: zod.enum(["active", "paused", "blocked"]).optional(),
   isPublic: zod.boolean().optional(),
+  webhookUrl: zod.string().nullish(),
 });
 
 export const UpdateDomainResponse = zod.object({
@@ -171,6 +182,7 @@ export const UpdateDomainResponse = zod.object({
   name: zod.string(),
   status: zod.enum(["active", "paused", "blocked"]),
   isPublic: zod.boolean(),
+  webhookUrl: zod.string().nullish(),
   emailCount: zod.number(),
   createdAt: zod.coerce.date(),
 });
@@ -309,6 +321,38 @@ export const GetRecentActivityResponseItem = zod.object({
 export const GetRecentActivityResponse = zod.array(
   GetRecentActivityResponseItem,
 );
+
+/**
+ * @summary List blocked sender patterns
+ */
+export const ListBlocklistResponseItem = zod.object({
+  id: zod.number(),
+  pattern: zod.string(),
+  type: zod.enum(["sender", "domain"]),
+  note: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListBlocklistResponse = zod.array(ListBlocklistResponseItem);
+
+/**
+ * @summary Add a new blocklist entry
+ */
+export const createBlocklistEntryBodyTypeDefault = `sender`;
+
+export const CreateBlocklistEntryBody = zod.object({
+  pattern: zod.string(),
+  type: zod
+    .enum(["sender", "domain"])
+    .default(createBlocklistEntryBodyTypeDefault),
+  note: zod.string().optional(),
+});
+
+/**
+ * @summary Remove a blocklist entry
+ */
+export const DeleteBlocklistEntryParams = zod.object({
+  id: zod.coerce.number(),
+});
 
 /**
  * @summary Email volume over the last 24 hours, bucketed hourly

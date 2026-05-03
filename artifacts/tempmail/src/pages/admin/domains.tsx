@@ -31,16 +31,44 @@ export default function Domains() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newDomain, setNewDomain] = useState("");
   const [newDomainPublic, setNewDomainPublic] = useState(true);
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
+  const [editingDomainId, setEditingDomainId] = useState<number | null>(null);
+  const [editingWebhookUrl, setEditingWebhookUrl] = useState("");
 
   const handleCreate = () => {
-    createDomain.mutate({ data: { name: newDomain, isPublic: newDomainPublic } }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListDomainsQueryKey() });
-        setIsCreateOpen(false);
-        setNewDomain("");
-        toast({ title: "Domain added successfully" });
-      }
-    });
+    createDomain.mutate(
+      {
+        data: {
+          name: newDomain,
+          isPublic: newDomainPublic,
+          webhookUrl: newWebhookUrl.trim() || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListDomainsQueryKey() });
+          setIsCreateOpen(false);
+          setNewDomain("");
+          setNewWebhookUrl("");
+          toast({ title: "Domain added successfully" });
+        },
+        onError: () => toast({ title: "Failed to add domain", variant: "destructive" }),
+      },
+    );
+  };
+
+  const handleSaveWebhook = (id: number) => {
+    updateDomain.mutate(
+      { id, data: { webhookUrl: editingWebhookUrl.trim() || null } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListDomainsQueryKey() });
+          setEditingDomainId(null);
+          toast({ title: "Webhook saved" });
+        },
+        onError: () => toast({ title: "Invalid webhook URL", variant: "destructive" }),
+      },
+    );
   };
 
   const handleTogglePublic = (id: number, isPublic: boolean) => {
@@ -98,6 +126,17 @@ export default function Domains() {
                   <Label>Public (available for random generation)</Label>
                   <Switch checked={newDomainPublic} onCheckedChange={setNewDomainPublic} />
                 </div>
+                <div className="space-y-2">
+                  <Label>Webhook URL (optional)</Label>
+                  <Input
+                    placeholder="https://hooks.example.com/incoming"
+                    value={newWebhookUrl}
+                    onChange={(e) => setNewWebhookUrl(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Notified via POST when an email arrives at this domain.
+                  </p>
+                </div>
                 <Button className="w-full" onClick={handleCreate} disabled={createDomain.isPending || !newDomain}>
                   {createDomain.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Add Domain"}
                 </Button>
@@ -151,6 +190,46 @@ export default function Domains() {
                     </TableCell>
                     <TableCell>{domain.emailCount.toLocaleString()}</TableCell>
                     <TableCell className="text-right space-x-2">
+                      <Dialog
+                        open={editingDomainId === domain.id}
+                        onOpenChange={(o) => {
+                          if (o) {
+                            setEditingDomainId(domain.id);
+                            setEditingWebhookUrl(domain.webhookUrl ?? "");
+                          } else {
+                            setEditingDomainId(null);
+                          }
+                        }}
+                      >
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            Webhook {domain.webhookUrl ? <span className="ml-1 text-primary">●</span> : null}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Webhook for {domain.name}</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-3 pt-2">
+                            <Label>POST URL (leave empty to disable)</Label>
+                            <Input
+                              placeholder="https://hooks.example.com/incoming"
+                              value={editingWebhookUrl}
+                              onChange={(e) => setEditingWebhookUrl(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Each incoming email triggers a POST with JSON payload (event, fromAddress, toAddress, subject, preview, ...).
+                            </p>
+                            <Button
+                              className="w-full"
+                              onClick={() => handleSaveWebhook(domain.id)}
+                              disabled={updateDomain.isPending}
+                            >
+                              Save webhook
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                       <Button variant="outline" size="sm" onClick={() => handleCheckDns(domain.id)}>
                         Check DNS
                       </Button>

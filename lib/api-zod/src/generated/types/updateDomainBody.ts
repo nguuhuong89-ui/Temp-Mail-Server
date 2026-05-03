@@ -10,4 +10,6 @@ import type { UpdateDomainBodyStatus } from "./updateDomainBodyStatus";
 export type UpdateDomainBody = {
   status?: UpdateDomainBodyStatus;
   isPublic?: boolean;
+  /** @nullable */
+  webhookUrl?: string | null;
 };

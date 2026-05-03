@@ -11,6 +11,7 @@ import Dashboard from "@/pages/admin/dashboard";
 import Domains from "@/pages/admin/domains";
 import EmailsExplorer from "@/pages/admin/emails";
 import Ads from "@/pages/admin/ads";
+import Blocklist from "@/pages/admin/blocklist";
 import SetupGuide from "@/pages/admin/setup";
 
 const queryClient = new QueryClient({
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/admin/domains" component={Domains} />
       <Route path="/admin/emails" component={EmailsExplorer} />
       <Route path="/admin/ads" component={Ads} />
+      <Route path="/admin/blocklist" component={Blocklist} />
       <Route path="/admin/setup" component={SetupGuide} />
       
       <Route component={NotFound} />

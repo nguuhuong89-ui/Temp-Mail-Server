@@ -19,7 +19,9 @@ import type {
 import type {
   ActivityItem,
   Ad,
+  BlocklistEntry,
   CreateAdBody,
+  CreateBlocklistEntryBody,
   CreateCustomInboxBody,
   CreateDomainBody,
   DashboardStats,
@@ -455,6 +457,91 @@ export const useDeleteInbox = <
   TContext
 > => {
   return useMutation(getDeleteInboxMutationOptions(options));
+};
+
+/**
+ * @summary Delete a single email from your inbox
+ */
+export const getDeleteInboxEmailUrl = (address: string, id: number) => {
+  return `/api/inbox/${address}/emails/${id}`;
+};
+
+export const deleteInboxEmail = async (
+  address: string,
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteInboxEmailUrl(address, id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteInboxEmailMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteInboxEmail>>,
+    TError,
+    { address: string; id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteInboxEmail>>,
+  TError,
+  { address: string; id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteInboxEmail"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteInboxEmail>>,
+    { address: string; id: number }
+  > = (props) => {
+    const { address, id } = props ?? {};
+
+    return deleteInboxEmail(address, id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteInboxEmailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteInboxEmail>>
+>;
+
+export type DeleteInboxEmailMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a single email from your inbox
+ */
+export const useDeleteInboxEmail = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteInboxEmail>>,
+    TError,
+    { address: string; id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteInboxEmail>>,
+  TError,
+  { address: string; id: number },
+  TContext
+> => {
+  return useMutation(getDeleteInboxEmailMutationOptions(options));
 };
 
 /**
@@ -1762,6 +1849,252 @@ export function useGetRecentActivity<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List blocked sender patterns
+ */
+export const getListBlocklistUrl = () => {
+  return `/api/blocklist`;
+};
+
+export const listBlocklist = async (
+  options?: RequestInit,
+): Promise<BlocklistEntry[]> => {
+  return customFetch<BlocklistEntry[]>(getListBlocklistUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBlocklistQueryKey = () => {
+  return [`/api/blocklist`] as const;
+};
+
+export const getListBlocklistQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBlocklist>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBlocklist>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBlocklistQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listBlocklist>>> = ({
+    signal,
+  }) => listBlocklist({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBlocklist>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListBlocklistQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBlocklist>>
+>;
+export type ListBlocklistQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List blocked sender patterns
+ */
+
+export function useListBlocklist<
+  TData = Awaited<ReturnType<typeof listBlocklist>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBlocklist>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListBlocklistQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a new blocklist entry
+ */
+export const getCreateBlocklistEntryUrl = () => {
+  return `/api/blocklist`;
+};
+
+export const createBlocklistEntry = async (
+  createBlocklistEntryBody: CreateBlocklistEntryBody,
+  options?: RequestInit,
+): Promise<BlocklistEntry> => {
+  return customFetch<BlocklistEntry>(getCreateBlocklistEntryUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createBlocklistEntryBody),
+  });
+};
+
+export const getCreateBlocklistEntryMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBlocklistEntry>>,
+    TError,
+    { data: BodyType<CreateBlocklistEntryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createBlocklistEntry>>,
+  TError,
+  { data: BodyType<CreateBlocklistEntryBody> },
+  TContext
+> => {
+  const mutationKey = ["createBlocklistEntry"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createBlocklistEntry>>,
+    { data: BodyType<CreateBlocklistEntryBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createBlocklistEntry(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBlocklistEntryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBlocklistEntry>>
+>;
+export type CreateBlocklistEntryMutationBody =
+  BodyType<CreateBlocklistEntryBody>;
+export type CreateBlocklistEntryMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Add a new blocklist entry
+ */
+export const useCreateBlocklistEntry = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBlocklistEntry>>,
+    TError,
+    { data: BodyType<CreateBlocklistEntryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createBlocklistEntry>>,
+  TError,
+  { data: BodyType<CreateBlocklistEntryBody> },
+  TContext
+> => {
+  return useMutation(getCreateBlocklistEntryMutationOptions(options));
+};
+
+/**
+ * @summary Remove a blocklist entry
+ */
+export const getDeleteBlocklistEntryUrl = (id: number) => {
+  return `/api/blocklist/${id}`;
+};
+
+export const deleteBlocklistEntry = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteBlocklistEntryUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteBlocklistEntryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBlocklistEntry>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteBlocklistEntry>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteBlocklistEntry"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteBlocklistEntry>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteBlocklistEntry(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteBlocklistEntryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteBlocklistEntry>>
+>;
+
+export type DeleteBlocklistEntryMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove a blocklist entry
+ */
+export const useDeleteBlocklistEntry = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBlocklistEntry>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteBlocklistEntry>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteBlocklistEntryMutationOptions(options));
+};
 
 /**
  * @summary Email volume over the last 24 hours, bucketed hourly

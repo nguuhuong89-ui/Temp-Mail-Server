@@ -13,6 +13,7 @@ tags:
   - name: domains
   - name: ads
   - name: stats
+  - name: blocklist
 paths:
   /healthz:
     get:
@@ -114,6 +115,32 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /inbox/{address}/emails/{id}:
+    delete:
+      operationId: deleteInboxEmail
+      tags: [inbox]
+      summary: Delete a single email from your inbox
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /inbox/{address}/refresh:
     post:
@@ -235,6 +262,8 @@ paths:
                 isPublic:
                   type: boolean
                   default: true
+                webhookUrl:
+                  type: ["string", "null"]
       responses:
         "201":
           description: Created
@@ -272,6 +301,8 @@ paths:
                   enum: [active, paused, blocked]
                 isPublic:
                   type: boolean
+                webhookUrl:
+                  type: ["string", "null"]
       responses:
         "200":
           description: Updated
@@ -455,6 +486,69 @@ paths:
                 items:
                   $ref: "#/components/schemas/ActivityItem"
 
+  /blocklist:
+    get:
+      operationId: listBlocklist
+      tags: [blocklist]
+      summary: List blocked sender patterns
+      responses:
+        "200":
+          description: Entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BlocklistEntry"
+    post:
+      operationId: createBlocklistEntry
+      tags: [blocklist]
+      summary: Add a new blocklist entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pattern]
+              properties:
+                pattern:
+                  type: string
+                type:
+                  type: string
+                  enum: [sender, domain]
+                  default: sender
+                note:
+                  type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlocklistEntry"
+        "409":
+          description: Already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /blocklist/{id}:
+    delete:
+      operationId: deleteBlocklistEntry
+      tags: [blocklist]
+      summary: Remove a blocklist entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   /stats/timeseries:
     get:
       operationId: getEmailTimeseries
@@ -573,8 +667,27 @@ components:
           enum: [active, paused, blocked]
         isPublic:
           type: boolean
+        webhookUrl:
+          type: ["string", "null"]
         emailCount:
           type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    BlocklistEntry:
+      type: object
+      required: [id, pattern, type, note, createdAt]
+      properties:
+        id:
+          type: integer
+        pattern:
+          type: string
+        type:
+          type: string
+          enum: [sender, domain]
+        note:
+          type: string
         createdAt:
           type: string
           format: date-time

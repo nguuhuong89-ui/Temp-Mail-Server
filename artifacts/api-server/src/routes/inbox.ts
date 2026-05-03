@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, inboxesTable, emailsTable, domainsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import {
   generateLocalPart,
   generateToken,
@@ -149,6 +149,24 @@ router.delete("/inbox/:address", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
   await db.delete(emailsTable).where(eq(emailsTable.toAddress, address));
   await db.delete(inboxesTable).where(eq(inboxesTable.address, address));
+  res.status(204).end();
+});
+
+router.delete("/inbox/:address/emails/:id", async (req, res) => {
+  const address = String(req.params["address"]).toLowerCase();
+  const id = Number(req.params["id"]);
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const result = await db
+    .delete(emailsTable)
+    .where(and(eq(emailsTable.id, id), eq(emailsTable.toAddress, address)))
+    .returning({ id: emailsTable.id });
+  if (result.length === 0) {
+    res.status(404).json({ error: "Email not found" });
+    return;
+  }
   res.status(204).end();
 });
 

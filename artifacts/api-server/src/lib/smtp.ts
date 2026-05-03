@@ -5,6 +5,8 @@ import { logger } from "./logger";
 import { emitEmailReceived } from "./events";
 import { defaultExpiry, generateToken, makePreview } from "./inbox-utils";
 import { lookupDomain } from "./domain-cache";
+import { isSenderBlocked } from "./blocklist-cache";
+import { fireEmailWebhook } from "./webhooks";
 
 export function startSmtpServer(port: number): SMTPServer {
   const server = new SMTPServer({
@@ -46,6 +48,12 @@ export function startSmtpServer(port: number): SMTPServer {
           const hasAttachments = (parsed.attachments?.length ?? 0) > 0;
           const preview = makePreview(text || (html ? html.replace(/<[^>]+>/g, " ") : ""));
 
+          if (fromAddress && (await isSenderBlocked(fromAddress))) {
+            logger.warn({ fromAddress }, "Rejected mail from blocked sender");
+            callback();
+            return;
+          }
+
           for (const rcpt of session.envelope.rcptTo) {
             const toAddress = rcpt.address.toLowerCase();
             const domainName = toAddress.split("@")[1] ?? "";
@@ -85,6 +93,19 @@ export function startSmtpServer(port: number): SMTPServer {
                 subject: row.subject,
                 receivedAt: row.receivedAt.toISOString(),
               });
+              // Fire optional per-domain webhook (non-blocking).
+              if (domain.webhookUrl) {
+                fireEmailWebhook(domain.webhookUrl, {
+                  event: "email.received",
+                  emailId: row.id,
+                  toAddress: row.toAddress,
+                  fromAddress: row.fromAddress,
+                  subject: row.subject,
+                  preview: row.preview,
+                  hasAttachments: row.hasAttachments,
+                  receivedAt: row.receivedAt.toISOString(),
+                });
+              }
             }
           }
           callback();

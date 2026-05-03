@@ -3,6 +3,7 @@ import { db, domainsTable, emailsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { resolveMx } from "node:dns/promises";
 import { invalidateDomainCache } from "../lib/domain-cache";
+import { isSafeWebhookUrl } from "../lib/webhooks";
 
 const router: IRouter = Router();
 
@@ -13,6 +14,7 @@ router.get("/domains", async (_req, res) => {
       name: domainsTable.name,
       status: domainsTable.status,
       isPublic: domainsTable.isPublic,
+      webhookUrl: domainsTable.webhookUrl,
       createdAt: domainsTable.createdAt,
       emailCount: sql<number>`count(${emailsTable.id})::int`,
     })
@@ -30,9 +32,13 @@ router.get("/domains", async (_req, res) => {
 });
 
 router.post("/domains", async (req, res) => {
-  const { name, isPublic } = req.body ?? {};
+  const { name, isPublic, webhookUrl } = req.body ?? {};
   if (typeof name !== "string" || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(name)) {
     res.status(400).json({ error: "Invalid domain name" });
+    return;
+  }
+  if (webhookUrl != null && webhookUrl !== "" && !isSafeWebhookUrl(String(webhookUrl))) {
+    res.status(400).json({ error: "Invalid webhook URL" });
     return;
   }
   try {
@@ -42,6 +48,7 @@ router.post("/domains", async (req, res) => {
         name: name.toLowerCase(),
         isPublic: isPublic ?? true,
         status: "active",
+        webhookUrl: webhookUrl ? String(webhookUrl) : null,
       })
       .returning();
     if (!row) {
@@ -54,6 +61,7 @@ router.post("/domains", async (req, res) => {
       name: row.name,
       status: row.status,
       isPublic: row.isPublic,
+      webhookUrl: row.webhookUrl,
       emailCount: 0,
       createdAt: row.createdAt.toISOString(),
     });
@@ -68,10 +76,20 @@ router.patch("/domains/:id", async (req, res) => {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
-  const { status, isPublic } = req.body ?? {};
+  const { status, isPublic, webhookUrl } = req.body ?? {};
   const patch: Record<string, unknown> = {};
   if (typeof status === "string") patch["status"] = status;
   if (typeof isPublic === "boolean") patch["isPublic"] = isPublic;
+  if (webhookUrl !== undefined) {
+    if (webhookUrl === null || webhookUrl === "") {
+      patch["webhookUrl"] = null;
+    } else if (typeof webhookUrl === "string" && isSafeWebhookUrl(webhookUrl)) {
+      patch["webhookUrl"] = webhookUrl;
+    } else {
+      res.status(400).json({ error: "Invalid webhook URL" });
+      return;
+    }
+  }
   if (Object.keys(patch).length === 0) {
     res.status(400).json({ error: "Nothing to update" });
     return;
@@ -91,6 +109,7 @@ router.patch("/domains/:id", async (req, res) => {
     name: row.name,
     status: row.status,
     isPublic: row.isPublic,
+    webhookUrl: row.webhookUrl,
     emailCount: 0,
     createdAt: row.createdAt.toISOString(),
   });

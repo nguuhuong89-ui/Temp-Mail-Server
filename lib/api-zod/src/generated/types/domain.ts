@@ -12,6 +12,8 @@ export interface Domain {
   name: string;
   status: DomainStatus;
   isPublic: boolean;
+  /** @nullable */
+  webhookUrl?: string | null;
   emailCount: number;
   createdAt: Date;
 }

@@ -5,6 +5,7 @@ import emailsRouter from "./emails";
 import domainsRouter from "./domains";
 import adsRouter, { publicAdsRouter } from "./ads";
 import statsRouter from "./stats";
+import blocklistRouter from "./blocklist";
 import { adminAuth } from "../middlewares/admin-auth";
 
 const router: IRouter = Router();
@@ -20,5 +21,6 @@ router.use(emailsRouter);
 router.use(domainsRouter);
 router.use(adsRouter);
 router.use(statsRouter);
+router.use(blocklistRouter);
 
 export default router;

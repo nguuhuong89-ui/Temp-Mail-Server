@@ -61,7 +61,25 @@ export interface Domain {
   name: string;
   status: DomainStatus;
   isPublic: boolean;
+  /** @nullable */
+  webhookUrl?: string | null;
   emailCount: number;
+  createdAt: string;
+}
+
+export type BlocklistEntryType =
+  (typeof BlocklistEntryType)[keyof typeof BlocklistEntryType];
+
+export const BlocklistEntryType = {
+  sender: "sender",
+  domain: "domain",
+} as const;
+
+export interface BlocklistEntry {
+  id: number;
+  pattern: string;
+  type: BlocklistEntryType;
+  note: string;
   createdAt: string;
 }
 
@@ -141,6 +159,8 @@ export type ListAllEmailsParams = {
 export type CreateDomainBody = {
   name: string;
   isPublic?: boolean;
+  /** @nullable */
+  webhookUrl?: string | null;
 };
 
 export type UpdateDomainBodyStatus =
@@ -155,6 +175,8 @@ export const UpdateDomainBodyStatus = {
 export type UpdateDomainBody = {
   status?: UpdateDomainBodyStatus;
   isPublic?: boolean;
+  /** @nullable */
+  webhookUrl?: string | null;
 };
 
 export type CreateAdBodyPlacement =
@@ -197,4 +219,18 @@ export type UpdateAdBody = {
   /** @nullable */
   linkUrl?: string | null;
   isActive?: boolean;
+};
+
+export type CreateBlocklistEntryBodyType =
+  (typeof CreateBlocklistEntryBodyType)[keyof typeof CreateBlocklistEntryBodyType];
+
+export const CreateBlocklistEntryBodyType = {
+  sender: "sender",
+  domain: "domain",
+} as const;
+
+export type CreateBlocklistEntryBody = {
+  pattern: string;
+  type?: CreateBlocklistEntryBodyType;
+  note?: string;
 };
