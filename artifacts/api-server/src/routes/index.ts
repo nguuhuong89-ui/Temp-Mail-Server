@@ -10,6 +10,7 @@ import v1Router from "./v1";
 import apiKeysRouter from "./api-keys";
 import accountRouter from "./account";
 import adminUsersRouter from "./admin-users";
+import publicRouter from "./public";
 import { adminAuth } from "../middlewares/admin-auth";
 import { attachUser, requireAdmin } from "../middlewares/clerk-auth";
 
@@ -17,6 +18,7 @@ const router: IRouter = Router();
 
 // Public endpoints (note: inbox routes use attachUser to optionally tag with signed-in user)
 router.use(healthRouter);
+router.use(publicRouter);
 router.use(attachUser, inboxRouter);
 router.use(publicAdsRouter);
 

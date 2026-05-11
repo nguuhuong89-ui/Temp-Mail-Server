@@ -8,8 +8,10 @@ import {
   useGetInbox,
   useExtendInbox,
   useDeleteInboxEmail,
+  useListPublicDomains,
   getGetInboxQueryKey,
 } from "@workspace/api-client-react";
+import { TotpWidget } from "@/components/totp-widget";
 import { Button } from "@/components/ui/button";
 import { Copy, RefreshCw, Clock, Inbox as InboxIcon, ChevronRight, Paperclip, Mail, QrCode, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +40,8 @@ export default function Home() {
   const createRandom = useCreateRandomInbox();
   const extend = useExtendInbox();
   const deleteEmail = useDeleteInboxEmail();
+  const { data: publicDomains } = useListPublicDomains();
+  const [selectedDomainId, setSelectedDomainId] = useState<string>("");
   const [qrOpen, setQrOpen] = useState(false);
 
   useInboxStream(address || undefined);
@@ -49,12 +53,16 @@ export default function Home() {
   }, [params.address, localAddress, setLocalAddress]);
 
   const handleGenerate = () => {
-    createRandom.mutate(undefined, {
-      onSuccess: (data) => {
-        setLocalAddress(data.address);
-        window.history.pushState({}, '', `/inbox/${data.address}`);
-      }
-    });
+    const domainId = selectedDomainId ? parseInt(selectedDomainId, 10) : undefined;
+    createRandom.mutate(
+      { data: domainId ? { domainId } : {} },
+      {
+        onSuccess: (data) => {
+          setLocalAddress(data.address);
+          window.history.pushState({}, "", `/inbox/${data.address}`);
+        },
+      },
+    );
   };
 
   const handleCopy = () => {
@@ -110,10 +118,27 @@ export default function Home() {
           <div className="p-4 sm:p-6 md:p-12 border-b bg-muted/30 flex flex-col items-center justify-center gap-4 sm:gap-6">
             {!address ? (
               <div className="flex flex-col items-center gap-4">
-                <Button size="lg" onClick={handleGenerate} disabled={createRandom.isPending} className="text-lg h-14 px-8 rounded-full">
-                  {createRandom.isPending ? <RefreshCw className="mr-2 h-5 w-5 animate-spin" /> : <Mail className="mr-2 h-5 w-5" />}
-                  Generate New Inbox
-                </Button>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <Button size="lg" onClick={handleGenerate} disabled={createRandom.isPending} className="text-lg h-14 px-8 rounded-full" data-testid="button-generate-inbox">
+                    {createRandom.isPending ? <RefreshCw className="mr-2 h-5 w-5 animate-spin" /> : <Mail className="mr-2 h-5 w-5" />}
+                    Generate New Inbox
+                  </Button>
+                  {publicDomains && publicDomains.length > 1 && (
+                    <select
+                      value={selectedDomainId}
+                      onChange={(e) => setSelectedDomainId(e.target.value)}
+                      className="h-12 sm:h-14 px-4 rounded-full border border-input bg-background text-sm font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      data-testid="select-domain"
+                    >
+                      <option value="">@ Domain mặc định</option>
+                      {publicDomains.map((d) => (
+                        <option key={d.id} value={String(d.id)}>
+                          @{d.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
             ) : (
               <>
@@ -256,6 +281,10 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="mt-6 sm:mt-8">
+          <TotpWidget />
         </div>
       </div>
     </PublicLayout>

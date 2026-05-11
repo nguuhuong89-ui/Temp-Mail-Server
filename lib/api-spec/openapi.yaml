@@ -34,6 +34,16 @@ paths:
       operationId: createRandomInbox
       tags: [inbox]
       summary: Generate a random disposable inbox address
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                domainId:
+                  type: integer
+                  description: Optional public domain id to use; defaults to MAIL_DOMAIN.
       responses:
         "200":
           description: Created
@@ -41,6 +51,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Inbox"
+        "400":
+          description: Invalid domain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /public/domains:
+    get:
+      operationId: listPublicDomains
+      tags: [public]
+      summary: List public active domains usable for random inbox generation
+      responses:
+        "200":
+          description: Domains
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PublicDomain"
+
+  /totp:
+    get:
+      operationId: generateTotp
+      tags: [public]
+      summary: Generate a current TOTP code from a base32 secret or otpauth:// URI
+      parameters:
+        - name: secret
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotpCode"
+        "400":
+          description: Invalid secret
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /inbox/custom:
     post:
@@ -724,6 +780,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EmailPreview"
+
+    PublicDomain:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    TotpCode:
+      type: object
+      required: [code, remainingSeconds, period]
+      properties:
+        code:
+          type: string
+        remainingSeconds:
+          type: integer
+        period:
+          type: integer
 
     Domain:
       type: object

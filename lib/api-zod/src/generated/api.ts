@@ -17,11 +17,42 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Generate a random disposable inbox address
  */
+export const CreateRandomInboxBody = zod.object({
+  domainId: zod
+    .number()
+    .optional()
+    .describe("Optional public domain id to use; defaults to MAIL_DOMAIN."),
+});
+
 export const CreateRandomInboxResponse = zod.object({
   address: zod.string(),
   token: zod.string(),
   createdAt: zod.coerce.date(),
   expiresAt: zod.coerce.date(),
+});
+
+/**
+ * @summary List public active domains usable for random inbox generation
+ */
+export const ListPublicDomainsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+});
+export const ListPublicDomainsResponse = zod.array(
+  ListPublicDomainsResponseItem,
+);
+
+/**
+ * @summary Generate a current TOTP code from a base32 secret or otpauth:// URI
+ */
+export const GenerateTotpQueryParams = zod.object({
+  secret: zod.coerce.string(),
+});
+
+export const GenerateTotpResponse = zod.object({
+  code: zod.string(),
+  remainingSeconds: zod.number(),
+  period: zod.number(),
 });
 
 /**

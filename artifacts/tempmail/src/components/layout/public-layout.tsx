@@ -62,11 +62,17 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="border-t py-6 md:py-0 border-border/40">
-        <div className="container max-w-5xl mx-auto flex flex-col md:h-14 items-center justify-between gap-4 md:flex-row px-4">
-          <p className="text-sm leading-loose text-muted-foreground">
-            Built with speed and confidence.
-          </p>
+      <footer className="border-t py-6 border-border/40">
+        <div className="container max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 px-4 text-sm text-muted-foreground">
+          <p className="leading-loose">Built with speed and confidence.</p>
+          <nav className="flex items-center gap-4">
+            <Link href="/acceptable-use" className="hover:text-foreground transition-colors">
+              Chính sách sử dụng
+            </Link>
+            <Link href="/abuse" className="hover:text-foreground transition-colors">
+              Báo cáo lạm dụng
+            </Link>
+          </nav>
         </div>
       </footer>
     </div>

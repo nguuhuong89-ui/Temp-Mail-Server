@@ -27,18 +27,22 @@ import type {
   CreateBlocklistEntryBody,
   CreateCustomInboxBody,
   CreateDomainBody,
+  CreateRandomInboxBody,
   DashboardStats,
   DnsCheck,
   Domain,
   Email,
   EmailPreview,
   ErrorResponse,
+  GenerateTotpParams,
   HealthStatus,
   Inbox,
   InboxWithEmails,
   ListAllEmailsParams,
+  PublicDomain,
   RevokeApiKey200,
   TimeBucket,
+  TotpCode,
   UpdateAdBody,
   UpdateDomainBody,
 } from "./api.schemas";
@@ -135,29 +139,32 @@ export const getCreateRandomInboxUrl = () => {
 };
 
 export const createRandomInbox = async (
+  createRandomInboxBody?: CreateRandomInboxBody,
   options?: RequestInit,
 ): Promise<Inbox> => {
   return customFetch<Inbox>(getCreateRandomInboxUrl(), {
     ...options,
     method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createRandomInboxBody),
   });
 };
 
 export const getCreateRandomInboxMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createRandomInbox>>,
     TError,
-    void,
+    { data: BodyType<CreateRandomInboxBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createRandomInbox>>,
   TError,
-  void,
+  { data: BodyType<CreateRandomInboxBody> },
   TContext
 > => {
   const mutationKey = ["createRandomInbox"];
@@ -171,9 +178,11 @@ export const getCreateRandomInboxMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createRandomInbox>>,
-    void
-  > = () => {
-    return createRandomInbox(requestOptions);
+    { data: BodyType<CreateRandomInboxBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createRandomInbox(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -182,31 +191,200 @@ export const getCreateRandomInboxMutationOptions = <
 export type CreateRandomInboxMutationResult = NonNullable<
   Awaited<ReturnType<typeof createRandomInbox>>
 >;
-
-export type CreateRandomInboxMutationError = ErrorType<unknown>;
+export type CreateRandomInboxMutationBody = BodyType<CreateRandomInboxBody>;
+export type CreateRandomInboxMutationError = ErrorType<ErrorResponse>;
 
 /**
  * @summary Generate a random disposable inbox address
  */
 export const useCreateRandomInbox = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createRandomInbox>>,
     TError,
-    void,
+    { data: BodyType<CreateRandomInboxBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof createRandomInbox>>,
   TError,
-  void,
+  { data: BodyType<CreateRandomInboxBody> },
   TContext
 > => {
   return useMutation(getCreateRandomInboxMutationOptions(options));
 };
+
+/**
+ * @summary List public active domains usable for random inbox generation
+ */
+export const getListPublicDomainsUrl = () => {
+  return `/api/public/domains`;
+};
+
+export const listPublicDomains = async (
+  options?: RequestInit,
+): Promise<PublicDomain[]> => {
+  return customFetch<PublicDomain[]>(getListPublicDomainsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublicDomainsQueryKey = () => {
+  return [`/api/public/domains`] as const;
+};
+
+export const getListPublicDomainsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicDomains>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicDomains>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPublicDomainsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPublicDomains>>
+  > = ({ signal }) => listPublicDomains({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicDomains>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicDomainsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicDomains>>
+>;
+export type ListPublicDomainsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List public active domains usable for random inbox generation
+ */
+
+export function useListPublicDomains<
+  TData = Awaited<ReturnType<typeof listPublicDomains>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicDomains>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicDomainsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Generate a current TOTP code from a base32 secret or otpauth:// URI
+ */
+export const getGenerateTotpUrl = (params: GenerateTotpParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/totp?${stringifiedParams}`
+    : `/api/totp`;
+};
+
+export const generateTotp = async (
+  params: GenerateTotpParams,
+  options?: RequestInit,
+): Promise<TotpCode> => {
+  return customFetch<TotpCode>(getGenerateTotpUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGenerateTotpQueryKey = (params?: GenerateTotpParams) => {
+  return [`/api/totp`, ...(params ? [params] : [])] as const;
+};
+
+export const getGenerateTotpQueryOptions = <
+  TData = Awaited<ReturnType<typeof generateTotp>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: GenerateTotpParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof generateTotp>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGenerateTotpQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof generateTotp>>> = ({
+    signal,
+  }) => generateTotp(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof generateTotp>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GenerateTotpQueryResult = NonNullable<
+  Awaited<ReturnType<typeof generateTotp>>
+>;
+export type GenerateTotpQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate a current TOTP code from a base32 secret or otpauth:// URI
+ */
+
+export function useGenerateTotp<
+  TData = Awaited<ReturnType<typeof generateTotp>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: GenerateTotpParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof generateTotp>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGenerateTotpQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Create a custom inbox with specified local part and domain

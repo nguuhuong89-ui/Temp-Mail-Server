@@ -26,6 +26,8 @@ import ApiKeys from "@/pages/admin/api-keys";
 import ApiDocs from "@/pages/admin/api-docs";
 import AdminUsers from "@/pages/admin/users";
 import SetupGuide from "@/pages/admin/setup";
+import AcceptableUsePage from "@/pages/acceptable-use";
+import AbusePage from "@/pages/abuse";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,6 +96,8 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/inbox/:address" component={Home} />
       <Route path="/email/:id" component={EmailView} />
+      <Route path="/acceptable-use" component={AcceptableUsePage} />
+      <Route path="/abuse" component={AbusePage} />
 
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />

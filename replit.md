@@ -7,6 +7,16 @@ TempMail — disposable/temporary email service (similar to temp-mail.io). pnpm 
 - `artifacts/api-server` (Express 5) — REST API at `/api` PLUS an embedded SMTP server (port `SMTP_PORT`, default 2525 dev / 25 docker) that receives mail, parses it via `mailparser`, stores it in Postgres, and broadcasts via in-process event bus to SSE subscribers at `GET /api/inbox/:address/stream`.
 - `artifacts/tempmail` (React + Vite) — end-user inbox UI at `/` (with QR-code share + per-email delete) and operator admin panel at `/admin/*` (dashboard, domains w/ per-domain webhook URL, emails, ads, blocklist, setup guide). Uses generated React Query hooks from `@workspace/api-client-react`.
 
+## Phase 6 — Public utilities (inspired by tinyhost.shop)
+
+- **`GET /api/public/domains`** — unauthenticated, returns ONLY `{id, name}` for `status='active' AND isPublic=true` domains. Used by the home-page domain picker. Does NOT leak `webhookUrl`/`userId` like the admin-gated `/api/domains`.
+- **`GET /api/totp?secret=...`** — stateless TOTP generator. Accepts a base32 secret OR an `otpauth://` URI (parses `digits`/`period`/`algorithm` if present). 512-char input cap. Returns `{code, remainingSeconds, period}`. Lib: `src/lib/totp.ts` (pure HMAC-SHA1/256/512 + manual base32 decoder, zero deps).
+- **`POST /api/inbox/random`** now accepts optional `{domainId}` body — must be active+public; falls back to `MAIL_DOMAIN` env if omitted. Validates with same logic as `/inbox/custom` minus the private-domain ownership branch.
+- **Frontend additions**:
+  - Home page shows a `<select>` next to "Generate New Inbox" when ≥2 public domains exist (auto-hidden when only 1).
+  - `<TotpWidget/>` card below inbox: paste secret → live 6-digit code with progress bar, auto-refresh on period rollover, copy button. Component at `src/components/totp-widget.tsx`.
+  - New static pages `/acceptable-use` and `/abuse` (Vietnamese), linked from the public footer.
+
 ## Phase 5 — User accounts (Clerk) + Free/Pro plans
 
 - **Auth**: Clerk via `@clerk/express` (server) + `@clerk/react` (web). Provisioned via `setupClerkWhitelabelAuth`. Clerk JS proxy at `/api/__clerk` is enabled in BOTH dev and prod (the whitelabel publishable key requires the proxy in dev too — `clerkProxyMiddleware` no longer short-circuits in dev).

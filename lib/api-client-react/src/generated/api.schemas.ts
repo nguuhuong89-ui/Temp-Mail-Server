@@ -48,6 +48,17 @@ export interface InboxWithEmails {
   emails: EmailPreview[];
 }
 
+export interface PublicDomain {
+  id: number;
+  name: string;
+}
+
+export interface TotpCode {
+  code: string;
+  remainingSeconds: number;
+  period: number;
+}
+
 export type DomainStatus = (typeof DomainStatus)[keyof typeof DomainStatus];
 
 export const DomainStatus = {
@@ -163,6 +174,15 @@ export interface TimeBucket {
   hour: string;
   count: number;
 }
+
+export type CreateRandomInboxBody = {
+  /** Optional public domain id to use; defaults to MAIL_DOMAIN. */
+  domainId?: number;
+};
+
+export type GenerateTotpParams = {
+  secret: string;
+};
 
 export type CreateCustomInboxBody = {
   localPart: string;

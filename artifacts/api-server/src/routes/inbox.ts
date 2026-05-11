@@ -14,7 +14,30 @@ const router: IRouter = Router();
 
 router.post("/inbox/random", async (req, res) => {
   const userId = (req as Request & { userId?: string }).userId ?? null;
-  const domain = await ensureDefaultDomain(process.env["MAIL_DOMAIN"] ?? "tempmail.local");
+  const rawDomainId = req.body?.domainId;
+  if (rawDomainId !== undefined && rawDomainId !== null) {
+    if (typeof rawDomainId !== "number" || !Number.isInteger(rawDomainId)) {
+      res.status(400).json({ error: "domainId must be an integer" });
+      return;
+    }
+  }
+  const requestedDomainId =
+    typeof rawDomainId === "number" && Number.isInteger(rawDomainId) ? rawDomainId : null;
+  let domain: string;
+  if (requestedDomainId !== null) {
+    const [row] = await db
+      .select()
+      .from(domainsTable)
+      .where(eq(domainsTable.id, requestedDomainId))
+      .limit(1);
+    if (!row || row.status !== "active" || !row.isPublic) {
+      res.status(400).json({ error: "Domain not available" });
+      return;
+    }
+    domain = row.name;
+  } else {
+    domain = await ensureDefaultDomain(process.env["MAIL_DOMAIN"] ?? "tempmail.local");
+  }
   for (let attempt = 0; attempt < 5; attempt++) {
     const local = generateLocalPart();
     const address = `${local}@${domain}`.toLowerCase();
