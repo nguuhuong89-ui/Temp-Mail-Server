@@ -8,16 +8,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, RefreshCw, Trash2, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,43 +40,43 @@ export default function Blocklist() {
           setPattern("");
           setNote("");
           refresh();
-          toast({ title: "Blocklist entry added" });
+          toast({ title: "Đã thêm vào blocklist" });
         },
-        onError: () => toast({ title: "Failed to add", variant: "destructive" }),
+        onError: () => toast({ title: "Thêm thất bại", variant: "destructive" }),
       },
     );
   };
 
   const remove = (id: number) => {
-    del.mutate({ id }, { onSuccess: () => { refresh(); toast({ title: "Removed" }); } });
+    del.mutate({ id }, { onSuccess: () => { refresh(); toast({ title: "Đã xóa" }); } });
   };
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Blocklist</h1>
-            <p className="text-muted-foreground">
-              Block incoming mail from specific sender addresses or domains.
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight">Blocklist</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">Chặn mail đến từ sender hoặc domain cụ thể.</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" /> Add Entry</Button>
+              <Button className="bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 border-0 shrink-0">
+                <Plus className="h-4 w-4 mr-2" /> Thêm Rule
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Block a sender</DialogTitle>
+                <DialogTitle>Thêm Blocklist Rule</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label>Match type</Label>
+                  <Label>Kiểu chặn</Label>
                   <Select value={type} onValueChange={(v) => setType(v as "sender" | "domain")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sender">Exact sender (e.g. spam@example.com)</SelectItem>
-                      <SelectItem value="domain">Whole domain (e.g. example.com)</SelectItem>
+                      <SelectItem value="sender">Exact sender (VD: spam@example.com)</SelectItem>
+                      <SelectItem value="domain">Toàn bộ domain (VD: example.com)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -93,65 +86,76 @@ export default function Blocklist() {
                     placeholder={type === "sender" ? "spammer@example.com" : "spam-domain.com"}
                     value={pattern}
                     onChange={(e) => setPattern(e.target.value)}
+                    className="font-mono"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Note (optional)</Label>
+                  <Label>Ghi chú (tùy chọn)</Label>
                   <Input
-                    placeholder="Why is this blocked?"
+                    placeholder="Lý do chặn?"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                   />
                 </div>
-                <Button className="w-full" onClick={submit} disabled={create.isPending || !pattern.trim()}>
-                  {create.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Add to blocklist"}
+                <Button
+                  className="w-full bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 border-0"
+                  onClick={submit}
+                  disabled={create.isPending || !pattern.trim()}
+                >
+                  {create.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Thêm vào blocklist"}
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
 
-        <div className="bg-card border rounded-lg shadow-sm">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Pattern</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Note</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">
-                  <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                </TableCell></TableRow>
-              ) : !entries?.length ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                  <ShieldAlert className="h-6 w-6 mx-auto mb-2 opacity-40" />
-                  No senders blocked. Add one to start filtering spam.
-                </TableCell></TableRow>
-              ) : (
-                entries.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="font-mono text-sm">{e.pattern}</TableCell>
-                    <TableCell><Badge variant="secondary">{e.type}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{e.note || "—"}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => remove(e.id)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="grid grid-cols-[1fr_90px_1fr_50px] gap-4 px-5 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            <span>Pattern</span>
+            <span>Kiểu</span>
+            <span>Ghi chú</span>
+            <span />
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
+              <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+              <span className="text-sm">Đang tải...</span>
+            </div>
+          ) : !entries?.length ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
+              <ShieldAlert className="h-10 w-10 opacity-20" />
+              <p className="text-sm">Chưa có rule nào. Thêm để bắt đầu lọc spam.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {entries.map((e) => (
+                <div key={e.id} className="grid grid-cols-[1fr_90px_1fr_50px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                  <div className="font-mono text-sm">{e.pattern}</div>
+                  <div>
+                    <Badge
+                      className={e.type === "domain"
+                        ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-0 text-xs"
+                        : "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border-0 text-xs"}
+                    >
+                      {e.type}
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-muted-foreground truncate">{e.note || "—"}</div>
+                  <div className="flex justify-end">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      onClick={() => remove(e.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </AdminLayout>
