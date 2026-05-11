@@ -220,6 +220,19 @@ router.delete("/inbox/:address", async (req, res) => {
   res.status(204).end();
 });
 
+router.delete("/inbox/:address/emails", async (req, res) => {
+  const address = String(req.params["address"]).toLowerCase();
+  if (await isOwnedByOther(req, address)) {
+    res.status(404).json({ error: "Inbox not found" });
+    return;
+  }
+  const result = await db
+    .delete(emailsTable)
+    .where(eq(emailsTable.toAddress, address))
+    .returning({ id: emailsTable.id });
+  res.json({ deleted: result.length });
+});
+
 router.delete("/inbox/:address/emails/:id", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
   const id = Number(req.params["id"]);

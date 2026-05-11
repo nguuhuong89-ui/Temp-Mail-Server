@@ -102,6 +102,17 @@ export const DeleteInboxParams = zod.object({
 });
 
 /**
+ * @summary Delete all emails in an inbox
+ */
+export const ClearInboxEmailsParams = zod.object({
+  address: zod.coerce.string(),
+});
+
+export const ClearInboxEmailsResponse = zod.object({
+  deleted: zod.number(),
+});
+
+/**
  * @summary Delete a single email from your inbox
  */
 export const DeleteInboxEmailParams = zod.object({

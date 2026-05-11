@@ -173,6 +173,35 @@ paths:
         "204":
           description: Deleted
 
+  /inbox/{address}/emails:
+    delete:
+      operationId: clearInboxEmails
+      tags: [inbox]
+      summary: Delete all emails in an inbox
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted count
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted]
+                properties:
+                  deleted:
+                    type: integer
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /inbox/{address}/emails/{id}:
     delete:
       operationId: deleteInboxEmail

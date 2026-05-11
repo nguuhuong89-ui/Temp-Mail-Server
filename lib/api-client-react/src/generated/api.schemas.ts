@@ -189,6 +189,10 @@ export type CreateCustomInboxBody = {
   domainId: number;
 };
 
+export type ClearInboxEmails200 = {
+  deleted: number;
+};
+
 export type ListAllEmailsParams = {
   limit?: number;
   domainId?: number;

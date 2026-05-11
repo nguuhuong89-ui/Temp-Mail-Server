@@ -22,6 +22,7 @@ import type {
   ApiKey,
   ApiKeyWithSecret,
   BlocklistEntry,
+  ClearInboxEmails200,
   CreateAdBody,
   CreateApiKeyBody,
   CreateBlocklistEntryBody,
@@ -639,6 +640,90 @@ export const useDeleteInbox = <
   TContext
 > => {
   return useMutation(getDeleteInboxMutationOptions(options));
+};
+
+/**
+ * @summary Delete all emails in an inbox
+ */
+export const getClearInboxEmailsUrl = (address: string) => {
+  return `/api/inbox/${address}/emails`;
+};
+
+export const clearInboxEmails = async (
+  address: string,
+  options?: RequestInit,
+): Promise<ClearInboxEmails200> => {
+  return customFetch<ClearInboxEmails200>(getClearInboxEmailsUrl(address), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearInboxEmailsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearInboxEmails>>,
+    TError,
+    { address: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearInboxEmails>>,
+  TError,
+  { address: string },
+  TContext
+> => {
+  const mutationKey = ["clearInboxEmails"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearInboxEmails>>,
+    { address: string }
+  > = (props) => {
+    const { address } = props ?? {};
+
+    return clearInboxEmails(address, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearInboxEmailsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearInboxEmails>>
+>;
+
+export type ClearInboxEmailsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete all emails in an inbox
+ */
+export const useClearInboxEmails = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearInboxEmails>>,
+    TError,
+    { address: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearInboxEmails>>,
+  TError,
+  { address: string },
+  TContext
+> => {
+  return useMutation(getClearInboxEmailsMutationOptions(options));
 };
 
 /**
