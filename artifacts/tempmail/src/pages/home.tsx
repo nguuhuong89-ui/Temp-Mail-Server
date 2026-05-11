@@ -229,20 +229,23 @@ export default function Home() {
         <AdRenderer placement="header" />
 
         {/* Main card */}
-        <div className="bg-white dark:bg-card rounded-lg border shadow-sm overflow-hidden">
+        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur rounded-xl border border-white/20 shadow-2xl shadow-black/30 overflow-hidden">
+          {/* Accent top bar */}
+          <div className="h-1 bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-500" />
+
           {/* Email row */}
-          <div className="p-4 border-b space-y-3">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700/60 space-y-3">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <label className="text-sm font-semibold shrink-0 sm:w-14">Email:</label>
+              <label className="text-sm font-semibold shrink-0 sm:w-14 text-slate-600 dark:text-slate-400">Email:</label>
               <div className="flex-1 flex items-center gap-2">
-                <div className="flex-1 px-3 py-2 border rounded text-sm font-mono bg-muted/30 truncate select-all">
-                  {address || <span className="text-muted-foreground italic">— chưa có inbox —</span>}
+                <div className="flex-1 px-3 py-2 border border-indigo-200 dark:border-indigo-900/60 rounded-lg text-sm font-mono bg-indigo-50/50 dark:bg-indigo-950/30 truncate select-all text-slate-800 dark:text-slate-100">
+                  {address || <span className="text-slate-400 dark:text-slate-500 italic">— chưa có inbox —</span>}
                 </div>
                 {publicDomains && publicDomains.length > 1 && !address && (
                   <select
                     value={selectedDomainId}
                     onChange={(e) => setSelectedDomainId(e.target.value)}
-                    className="px-2 py-2 border rounded text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="px-2 py-2 border border-indigo-200 dark:border-indigo-900/60 rounded-lg text-sm bg-indigo-50/50 dark:bg-indigo-950/30 focus:outline-none focus:ring-2 focus:ring-violet-500"
                   >
                     <option value="">Domain mặc định</option>
                     {publicDomains.map((d) => (
@@ -251,8 +254,8 @@ export default function Home() {
                   </select>
                 )}
                 {address && (
-                  <span className={`px-2 py-1 text-xs font-bold rounded ${isOnline ? "bg-green-500 text-white" : "bg-gray-400 text-white"}`}>
-                    {isOnline ? "Online" : "Offline"}
+                  <span className={`px-2.5 py-1 text-xs font-bold rounded-full tracking-wide ${isOnline ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-500/20 text-slate-400 border border-slate-500/30"}`}>
+                    {isOnline ? "● Online" : "○ Offline"}
                   </span>
                 )}
               </div>
@@ -260,16 +263,16 @@ export default function Home() {
 
             {address && (
               <div className="flex items-center gap-2 text-sm flex-wrap">
-                <span className="font-semibold text-primary shrink-0">URL Email:</span>
+                <span className="font-semibold text-violet-600 dark:text-violet-400 shrink-0">URL Email:</span>
                 <a
                   href={shareUrl}
-                  className="text-primary hover:underline break-all font-mono text-xs"
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline break-all font-mono text-xs"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   {shareUrl}
                 </a>
-                <button onClick={handleCopyUrl} className="text-muted-foreground hover:text-primary shrink-0">
+                <button onClick={handleCopyUrl} className="text-slate-400 hover:text-violet-500 shrink-0 transition-colors">
                   <Copy className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -279,7 +282,7 @@ export default function Home() {
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
-                className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 border-0"
+                className="bg-amber-400 hover:bg-amber-300 text-amber-950 border-0 shadow-sm shadow-amber-400/30 font-semibold"
                 onClick={handleCopyAddress}
                 disabled={!address}
               >
@@ -287,7 +290,7 @@ export default function Home() {
               </Button>
               <Button
                 size="sm"
-                className="bg-cyan-500 hover:bg-cyan-600 text-white border-0"
+                className="bg-sky-500 hover:bg-sky-400 text-white border-0 shadow-sm shadow-sky-500/30 font-semibold"
                 onClick={() => address && queryClient.invalidateQueries({ queryKey: getGetInboxQueryKey(address) })}
                 disabled={!address || isLoading}
               >
@@ -295,7 +298,7 @@ export default function Home() {
               </Button>
               <Button
                 size="sm"
-                className="bg-green-500 hover:bg-green-600 text-white border-0"
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 shadow-sm shadow-violet-500/30 font-semibold"
                 onClick={handleGenerate}
                 disabled={createRandom.isPending}
               >
@@ -306,14 +309,14 @@ export default function Home() {
               </Button>
               <Button
                 size="sm"
-                className="bg-red-500 hover:bg-red-600 text-white border-0"
+                className="bg-rose-500 hover:bg-rose-400 text-white border-0 shadow-sm shadow-rose-500/30 font-semibold"
                 onClick={handleDeleteAll}
                 disabled={!address || clearEmails.isPending || totalEmails === 0}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete All Mail
               </Button>
               {address && (
-                <Button size="sm" variant="outline" onClick={handleExtend} disabled={extend.isPending}>
+                <Button size="sm" variant="outline" onClick={handleExtend} disabled={extend.isPending} className="border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">
                   <RefreshCw className={`h-3.5 w-3.5 mr-1 ${extend.isPending ? "animate-spin" : ""}`} /> +10 phút
                 </Button>
               )}
@@ -321,19 +324,19 @@ export default function Home() {
 
             {/* Inbox label row: 2FA + custom domain */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
-              <span className="font-bold text-base shrink-0">Inbox:</span>
+              <span className="font-bold text-base shrink-0 text-violet-700 dark:text-violet-400">Inbox:</span>
               <div className="flex-1 flex flex-wrap items-center gap-2">
                 <Input
                   value={totpSecret}
                   onChange={(e) => setTotpSecret(e.target.value)}
                   placeholder="2FA key (base32 hoặc otpauth://...)"
-                  className="flex-1 min-w-0 h-8 text-sm font-mono"
+                  className="flex-1 min-w-0 h-8 text-sm font-mono border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 focus-visible:ring-violet-500"
                   onKeyDown={(e) => { if (e.key === "Enter") void fetchTotp(totpSecret); }}
                 />
                 {totpCode ? (
                   <button
                     onClick={handleCopyTotp}
-                    className="flex items-center gap-1 px-3 h-8 text-sm font-mono font-bold bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors shrink-0"
+                    className="flex items-center gap-1 px-3 h-8 text-sm font-mono font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:from-violet-500 hover:to-indigo-500 transition-all shrink-0 shadow-sm shadow-violet-500/30"
                     title={`${totpRemaining}s`}
                   >
                     {totpCode} <Copy className="h-3 w-3 ml-1" />
@@ -342,7 +345,7 @@ export default function Home() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 shrink-0"
+                    className="h-8 shrink-0 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
                     onClick={() => void fetchTotp(totpSecret)}
                     disabled={totpLoading || !totpSecret.trim()}
                   >
@@ -352,14 +355,14 @@ export default function Home() {
                 <Show when="signed-in">
                   <button
                     onClick={() => setAddDomainOpen(true)}
-                    className="flex items-center gap-1 px-3 h-8 text-sm bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors shrink-0"
+                    className="flex items-center gap-1 px-3 h-8 text-sm bg-slate-800 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors shrink-0"
                   >
                     <ExternalLink className="h-3.5 w-3.5" /> Add Domain
                   </button>
                 </Show>
                 <Show when="signed-out">
                   <Link href="/sign-in">
-                    <button className="flex items-center gap-1 px-3 h-8 text-sm bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors">
+                    <button className="flex items-center gap-1 px-3 h-8 text-sm bg-slate-800 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors">
                       <ExternalLink className="h-3.5 w-3.5" /> Add Domain
                     </button>
                   </Link>
@@ -369,35 +372,35 @@ export default function Home() {
           </div>
 
           {/* Pagination bar */}
-          <div className="px-4 py-2 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-muted/20 text-sm">
+          <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-700/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-indigo-50/40 dark:bg-indigo-950/20 text-sm">
             <div className="flex items-center gap-2">
-              <span>Show:</span>
+              <span className="text-slate-600 dark:text-slate-400">Show:</span>
               <select
                 value={pageSize}
                 onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                className="px-2 py-0.5 border rounded text-sm bg-background"
+                className="px-2 py-0.5 border border-indigo-200 dark:border-indigo-900/60 rounded-md text-sm bg-white dark:bg-slate-800"
               >
                 {PAGE_SIZE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
-              <span>emails per page</span>
+              <span className="text-slate-600 dark:text-slate-400">emails per page</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-muted-foreground">
+              <span className="text-slate-500 dark:text-slate-400 text-xs">
                 {totalEmails === 0 ? "No emails" : `Showing ${showingFrom}–${showingTo} of ${totalEmails} emails`}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="px-2 py-0.5 border rounded text-sm disabled:opacity-40 hover:bg-muted"
+                  className="px-2 py-0.5 border border-slate-300 dark:border-slate-600 rounded-md text-sm disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-700"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </button>
-                <span className="px-2 py-0.5 border rounded text-sm bg-primary text-primary-foreground min-w-[2rem] text-center">{page}</span>
+                <span className="px-2.5 py-0.5 rounded-md text-sm bg-gradient-to-r from-violet-600 to-indigo-600 text-white min-w-[2rem] text-center font-semibold">{page}</span>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="px-2 py-0.5 border rounded text-sm disabled:opacity-40 hover:bg-muted"
+                  className="px-2 py-0.5 border border-slate-300 dark:border-slate-600 rounded-md text-sm disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-700"
                 >
                   <ChevronRight className="h-3.5 w-3.5" />
                 </button>
@@ -409,29 +412,32 @@ export default function Home() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-700 text-white">
-                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wide w-1/4">Sender</th>
-                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wide">Subject</th>
-                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wide w-36 hidden sm:table-cell">Date</th>
-                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wide w-24">Actions</th>
+                <tr className="bg-gradient-to-r from-indigo-700 to-violet-700 text-white">
+                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider w-1/4">Sender</th>
+                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider">Subject</th>
+                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider w-36 hidden sm:table-cell">Date</th>
+                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider w-24">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && address ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={4} className="text-center py-8 text-slate-400">
                       <RefreshCw className="h-5 w-5 animate-spin mx-auto" />
                     </td>
                   </tr>
                 ) : !address ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-8 text-muted-foreground">
-                      Bấm "Generate New Email" để tạo inbox.
+                    <td colSpan={4} className="text-center py-10 text-slate-400">
+                      <div className="flex flex-col items-center gap-2">
+                        <Mail className="h-8 w-8 text-indigo-300 dark:text-indigo-600" />
+                        <span>Bấm <span className="text-violet-600 dark:text-violet-400 font-medium">"Generate New Email"</span> để tạo inbox.</span>
+                      </div>
                     </td>
                   </tr>
                 ) : pagedEmails.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={4} className="text-center py-8 text-slate-400">
                       No emails found
                     </td>
                   </tr>
@@ -439,25 +445,25 @@ export default function Home() {
                   pagedEmails.map((email, i) => (
                     <tr
                       key={email.id}
-                      className={`border-b cursor-pointer hover:bg-muted/40 transition-colors ${i % 2 === 0 ? "" : "bg-muted/10"}`}
+                      className={`border-b border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 transition-colors ${i % 2 === 0 ? "" : "bg-slate-50/60 dark:bg-slate-800/20"}`}
                       onClick={() => setLocation(`/email/${email.id}`)}
                     >
-                      <td className="px-4 py-2.5 truncate max-w-0 font-medium">
+                      <td className="px-4 py-2.5 truncate max-w-0 font-medium text-indigo-700 dark:text-indigo-300">
                         <span className="truncate block">{email.fromAddress}</span>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 text-slate-700 dark:text-slate-300">
                         <div className="flex items-center gap-1.5">
                           <span className="truncate">{email.subject || "(No Subject)"}</span>
-                          {email.hasAttachments && <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                          {email.hasAttachments && <Paperclip className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 text-muted-foreground text-xs hidden sm:table-cell whitespace-nowrap">
+                      <td className="px-4 py-2.5 text-slate-400 text-xs hidden sm:table-cell whitespace-nowrap">
                         {formatDistanceToNow(new Date(email.receivedAt), { addSuffix: true })}
                       </td>
                       <td className="px-4 py-2.5">
                         <button
                           onClick={(e) => handleDeleteEmail(e, email.id)}
-                          className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          className="p-1.5 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                           aria-label="Xoá email"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -472,15 +478,18 @@ export default function Home() {
         </div>
 
         {/* Important Notice */}
-        <div className="bg-white dark:bg-card rounded-lg border shadow-sm p-4 sm:p-5">
-          <h3 className="font-bold text-base mb-3">Important Notice</h3>
-          <ul className="space-y-1.5 text-sm text-muted-foreground list-disc pl-5">
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-xl border border-white/20 shadow-lg shadow-black/20 p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-5 w-1 rounded-full bg-gradient-to-b from-violet-500 to-indigo-500" />
+            <h3 className="font-bold text-base text-slate-800 dark:text-slate-100">Important Notice</h3>
+          </div>
+          <ul className="space-y-1.5 text-sm text-slate-500 dark:text-slate-400 list-disc pl-5">
             <li>Chúng tôi không quản lý trực tiếp các domain. Chúng được kiểm soát bởi chủ sở hữu, người có thể thêm/xóa bất kỳ lúc nào.</li>
             <li>Nếu email của bạn offline, domain đó đã bị gỡ. Chúng tôi không thể khôi phục.</li>
-            <li>Dịch vụ này chỉ <strong>nhận</strong> email tạm thời.</li>
-            <li>Gửi email, bulk mailing, hay SMTP relay <strong>không được hỗ trợ</strong>.</li>
+            <li>Dịch vụ này chỉ <strong className="text-slate-700 dark:text-slate-300">nhận</strong> email tạm thời.</li>
+            <li>Gửi email, bulk mailing, hay SMTP relay <strong className="text-slate-700 dark:text-slate-300">không được hỗ trợ</strong>.</li>
             <li>Chỉ dùng để test, bảo vệ quyền riêng tư, tránh spam.</li>
-            <li>Lạm dụng, gian lận, phishing hoặc tạo tài khoản hàng loạt là <strong>vi phạm</strong>.</li>
+            <li>Lạm dụng, gian lận, phishing hoặc tạo tài khoản hàng loạt là <strong className="text-rose-600 dark:text-rose-400">vi phạm</strong>.</li>
           </ul>
         </div>
 

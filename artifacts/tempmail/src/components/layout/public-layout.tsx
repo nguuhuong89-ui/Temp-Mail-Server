@@ -8,70 +8,63 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-900 text-foreground selection:bg-primary/30">
-      <header className="bg-white dark:bg-card border-b border-border/60 shadow-sm sticky top-0 z-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-indigo-950 via-slate-900 to-violet-950 text-foreground selection:bg-violet-500/30">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-black/30 backdrop-blur-md">
         <div className="container max-w-5xl mx-auto flex h-12 items-center justify-between gap-2 px-3 sm:px-4">
           {/* Logo */}
           <Link
             href="/"
-            className="flex items-center gap-1.5 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity shrink-0"
+            className="flex items-center gap-2 font-extrabold text-lg tracking-tight hover:opacity-90 transition-opacity shrink-0"
           >
-            <Mail className="h-5 w-5 text-primary" />
-            <span>
-              <span className="text-foreground">Temp</span>
-              <span className="text-primary">host</span>
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
+              <Mail className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-white">
+              Temp<span className="text-violet-400">Mail</span>
             </span>
           </Link>
 
-          {/* Desktop nav links */}
-          <nav className="hidden md:flex items-center gap-1 text-sm">
-            <Link href="/admin/api-docs">
-              <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs">
-                <BookOpen className="h-3.5 w-3.5" />
-                API Docs
-              </Button>
-            </Link>
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-0.5 text-sm">
+            {[
+              { href: "/admin/api-docs", icon: BookOpen, label: "API Docs" },
+              { href: "/acceptable-use", icon: ShieldCheck, label: "Acceptable Use" },
+              { href: "/abuse", icon: AlertTriangle, label: "Abuse" },
+            ].map(({ href, icon: Icon, label }) => (
+              <Link key={href} href={href}>
+                <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </Button>
+              </Link>
+            ))}
             <Show when="signed-in">
               <Link href="/account/domains">
-                <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs">
-                  <Globe className="h-3.5 w-3.5" />
-                  Add Custom Domain
+                <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
+                  <Globe className="h-3.5 w-3.5" /> Add Custom Domain
                 </Button>
               </Link>
             </Show>
             <Show when="signed-out">
               <Link href="/sign-in">
-                <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs">
-                  <Globe className="h-3.5 w-3.5" />
-                  Add Custom Domain
+                <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
+                  <Globe className="h-3.5 w-3.5" /> Add Custom Domain
                 </Button>
               </Link>
             </Show>
-            <Link href="/acceptable-use">
-              <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Acceptable Use
-              </Button>
-            </Link>
-            <Link href="/abuse">
-              <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Abuse
-              </Button>
-            </Link>
             <a href="mailto:contact@tempmail.local">
-              <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs">
-                <MessageCircle className="h-3.5 w-3.5" />
-                Contact
+              <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
+                <MessageCircle className="h-3.5 w-3.5" /> Contact
               </Button>
             </a>
           </nav>
 
-          {/* Right: auth + theme */}
+          {/* Right: auth */}
           <div className="flex items-center gap-1 shrink-0">
             <Show when="signed-in">
               <Link href="/account">
-                <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs" aria-label="Tài khoản">
+                <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs text-white/80 hover:text-white hover:bg-white/10">
                   <UserIcon className="h-3.5 w-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">Tài khoản</span>
                 </Button>
@@ -80,38 +73,40 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             </Show>
             <Show when="signed-out">
               <Link href="/sign-in">
-                <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs" aria-label="Đăng nhập">
+                <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs text-white/80 hover:text-white hover:bg-white/10">
                   <LogIn className="h-3.5 w-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">Đăng nhập</span>
                 </Button>
               </Link>
               <Link href="/sign-up">
-                <Button size="sm" className="h-8 px-2.5 text-xs">Đăng ký</Button>
+                <Button size="sm" className="h-8 px-3 text-xs bg-violet-600 hover:bg-violet-500 border-0 text-white shadow-lg shadow-violet-500/30">
+                  Đăng ký
+                </Button>
               </Link>
             </Show>
             <ThemeToggle />
           </div>
         </div>
 
-        {/* Mobile nav row */}
-        <div className="md:hidden border-t bg-muted/30 flex overflow-x-auto gap-1 px-2 py-1 scrollbar-none">
+        {/* Mobile nav */}
+        <div className="md:hidden border-t border-white/10 flex overflow-x-auto gap-1 px-2 py-1.5">
           <Link href="/admin/api-docs">
-            <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap">
+            <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap text-white/70 hover:text-white hover:bg-white/10">
               <BookOpen className="h-3 w-3" /> API Docs
             </Button>
           </Link>
           <Link href="/account/domains">
-            <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap">
+            <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap text-white/70 hover:text-white hover:bg-white/10">
               <Globe className="h-3 w-3" /> Add Domain
             </Button>
           </Link>
           <Link href="/acceptable-use">
-            <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap">
+            <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap text-white/70 hover:text-white hover:bg-white/10">
               <ShieldCheck className="h-3 w-3" /> Acceptable Use
             </Button>
           </Link>
           <Link href="/abuse">
-            <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap">
+            <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap text-white/70 hover:text-white hover:bg-white/10">
               <AlertTriangle className="h-3 w-3" /> Abuse
             </Button>
           </Link>
@@ -120,13 +115,13 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1">{children}</main>
 
-      <footer className="border-t py-4 bg-white dark:bg-card border-border/40">
-        <div className="container max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 px-4 text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} TempHost — receive-only temporary email service.</p>
+      <footer className="border-t border-white/10 py-4 bg-black/20 backdrop-blur-sm">
+        <div className="container max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 px-4 text-xs text-white/50">
+          <p>© {new Date().getFullYear()} TempMail — receive-only temporary email service.</p>
           <nav className="flex items-center gap-4">
-            <Link href="/acceptable-use" className="hover:text-foreground transition-colors">Chính sách sử dụng</Link>
-            <Link href="/abuse" className="hover:text-foreground transition-colors">Báo cáo lạm dụng</Link>
-            <a href="mailto:contact@tempmail.local" className="hover:text-foreground transition-colors">Contact</a>
+            <Link href="/acceptable-use" className="hover:text-white/80 transition-colors">Chính sách sử dụng</Link>
+            <Link href="/abuse" className="hover:text-white/80 transition-colors">Báo cáo lạm dụng</Link>
+            <a href="mailto:contact@tempmail.local" className="hover:text-white/80 transition-colors">Contact</a>
           </nav>
         </div>
       </footer>
