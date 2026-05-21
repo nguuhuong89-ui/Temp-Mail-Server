@@ -1,4 +1,4 @@
-FROM node:24-alpine AS base
+FROM node:24-slim AS base
 RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 WORKDIR /app
 
@@ -31,7 +31,7 @@ COPY --from=build /app/artifacts/tempmail/dist /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
-FROM node:24-alpine AS api
+FROM node:24-slim AS api
 RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
