@@ -3,6 +3,8 @@ RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 WORKDIR /app
 
 FROM base AS deps
+# Force dev deps regardless of host NODE_ENV build-arg (needed for TS/Vite/esbuild)
+ENV NODE_ENV=development
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc* ./
 COPY artifacts/api-server/package.json artifacts/api-server/
 COPY artifacts/tempmail/package.json artifacts/tempmail/
