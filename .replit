@@ -39,6 +39,7 @@ externalPort = 3001
 
 [userenv.shared]
 VITE_CLERK_PUBLISHABLE_KEY = "pk_test_cHJvdmVuLXNsb3RoLTk0LmNsZXJrLmFjY291bnRzLmRldiQ"
+ADMIN_EMAILS = "daimakervn@gmail.com"
 
 [nix]
 channel = "stable-25_05"
