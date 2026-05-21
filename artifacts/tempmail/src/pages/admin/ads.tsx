@@ -115,20 +115,36 @@ export default function Ads() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Nội dung Ad (HTML cho phép)</Label>
+                  <Label className="flex items-center justify-between">
+                    <span>Nội dung / Mã nhúng</span>
+                    <span className="text-[10px] font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      Hỗ trợ: văn bản · HTML · AdSense · mã mạng quảng cáo
+                    </span>
+                  </Label>
                   <Textarea
-                    placeholder="<strong>Ưu đãi giới hạn!</strong> Nhấn để xem thêm."
+                    placeholder={`Chọn một trong:\n① Văn bản: Ưu đãi 50% hôm nay!\n② HTML: <b>Flash Sale</b> <a href="...">Xem ngay</a>\n③ Mã AdSense/network: paste toàn bộ <script>...</script> hoặc <ins class="adsbygoogle"...>`}
                     value={newAd.content}
                     onChange={(e) => setNewAd({ ...newAd, content: e.target.value })}
-                    className="h-24"
+                    className="h-32 font-mono text-xs"
                   />
+                  {newAd.content.trim().startsWith("<script") || newAd.content.includes("<ins ") ? (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      ✓ Phát hiện mã nhúng — sẽ chạy trong iframe riêng (AdSense/network)
+                    </p>
+                  ) : newAd.content.includes("<") ? (
+                    <p className="text-xs text-indigo-500 flex items-center gap-1">
+                      ✓ Phát hiện HTML — sẽ render trực tiếp
+                    </p>
+                  ) : newAd.content ? (
+                    <p className="text-xs text-muted-foreground">Văn bản thuần</p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label>URL Hình ảnh (tùy chọn)</Label>
+                  <Label>URL Hình ảnh <span className="text-muted-foreground font-normal">(tùy chọn — chỉ dùng cho quảng cáo tự quản lý)</span></Label>
                   <Input placeholder="https://example.com/banner.jpg" value={newAd.imageUrl} onChange={(e) => setNewAd({ ...newAd, imageUrl: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Link đích (tùy chọn)</Label>
+                  <Label>Link đích <span className="text-muted-foreground font-normal">(tùy chọn — bỏ qua nếu dùng mã nhúng)</span></Label>
                   <Input placeholder="https://example.com/promo" value={newAd.linkUrl} onChange={(e) => setNewAd({ ...newAd, linkUrl: e.target.value })} />
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
