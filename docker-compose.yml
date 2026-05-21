@@ -57,6 +57,30 @@ services:
       - api
     expose:
       - "80"
+    networks:
+      - default
+      - coolify
+    labels:
+      - traefik.enable=true
+      - traefik.http.middlewares.gzip.compress=true
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.routers.http-0-tempmail.entryPoints=http
+      - traefik.http.routers.http-0-tempmail.middlewares=redirect-to-https
+      - traefik.http.routers.http-0-tempmail.rule=Host(`${MAIL_DOMAIN:-mail.vnsi.app}`) && PathPrefix(`/`)
+      - traefik.http.routers.http-0-tempmail.service=http-0-tempmail
+      - traefik.http.routers.https-0-tempmail.entryPoints=https
+      - traefik.http.routers.https-0-tempmail.middlewares=gzip
+      - traefik.http.routers.https-0-tempmail.rule=Host(`${MAIL_DOMAIN:-mail.vnsi.app}`) && PathPrefix(`/`)
+      - traefik.http.routers.https-0-tempmail.service=https-0-tempmail
+      - traefik.http.routers.https-0-tempmail.tls.certresolver=letsencrypt
+      - traefik.http.routers.https-0-tempmail.tls=true
+      - traefik.http.services.http-0-tempmail.loadbalancer.server.port=80
+      - traefik.http.services.https-0-tempmail.loadbalancer.server.port=80
+      - caddy_ingress_network=coolify
+
+networks:
+  coolify:
+    external: true
 
 volumes:
   pgdata:
