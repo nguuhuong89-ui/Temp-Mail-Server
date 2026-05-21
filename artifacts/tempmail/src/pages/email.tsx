@@ -69,10 +69,11 @@ export default function EmailView() {
               <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-800">
                 <Link
                   href={`/inbox/${email.toAddress}`}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-violet-400 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-violet-500 dark:hover:text-violet-400 transition-colors"
                 >
-                  <ArrowLeft className="h-3 w-3" />
-                  <span className="font-mono truncate max-w-[200px] sm:max-w-xs">{email.toAddress}</span>
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>Quay lại Inbox</span>
+                  <span className="hidden sm:inline text-slate-300 dark:text-slate-600 font-mono text-xs">({email.toAddress})</span>
                 </Link>
                 <div className="flex items-center gap-1">
                   {/* View mode toggle */}
