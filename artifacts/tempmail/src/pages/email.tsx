@@ -1,7 +1,7 @@
 import { PublicLayout } from "@/components/layout/public-layout";
 import { useGetEmail, getGetEmailQueryKey } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
-import { ArrowLeft, Clock, Mail, Paperclip, RefreshCw, Trash2, User, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Clock, Mail, Paperclip, RefreshCw, Trash2, Copy, ExternalLink, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { AdRenderer } from "@/components/ad-renderer";
@@ -32,28 +32,16 @@ export default function EmailView() {
     });
   };
 
-  const handleCopy = (text: string, label: string) => {
+  const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: `Đã copy ${label}` });
+    toast({ title: "Đã copy" });
   };
 
   return (
     <PublicLayout>
-      <div className="container max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4">
+      <div className="container max-w-4xl mx-auto px-3 sm:px-4 py-4 space-y-3">
 
-        {/* Ad — top of page */}
         <AdRenderer placement="header" />
-
-        {/* Back navigation */}
-        <div>
-          <Link
-            href={email ? `/inbox/${email.toAddress}` : "/"}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-violet-400 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Quay lại Inbox
-          </Link>
-        </div>
 
         {/* Loading */}
         {isLoading && (
@@ -73,114 +61,109 @@ export default function EmailView() {
 
         {email && (
           <>
-            {/* Email header card */}
+            {/* Compact header card */}
             <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur rounded-xl border border-white/20 shadow-xl shadow-black/20 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-500" />
+              <div className="h-0.5 bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-500" />
 
-              <div className="p-4 sm:p-6 space-y-4">
-                {/* Subject + actions */}
-                <div className="flex items-start justify-between gap-3">
-                  <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-snug flex-1">
-                    {email.subject || <span className="italic text-slate-400">(Không có tiêu đề)</span>}
-                  </h1>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDelete}
-                    disabled={deleteEmail.isPending}
-                    className="shrink-0 border-rose-200 dark:border-rose-900/60 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-400"
-                  >
-                    {deleteEmail.isPending
-                      ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      : <Trash2 className="h-3.5 w-3.5" />}
-                    <span className="ml-1.5 hidden sm:inline">Xoá</span>
-                  </Button>
-                </div>
-
-                {/* Meta rows */}
-                <div className="grid grid-cols-1 gap-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="w-12 shrink-0 text-xs font-semibold text-slate-400 uppercase tracking-wide">Từ</span>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <User className="h-3.5 w-3.5 text-violet-400 shrink-0" />
-                      <span className="font-mono text-slate-700 dark:text-slate-200 truncate">{email.fromAddress}</span>
+              {/* Breadcrumb bar */}
+              <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-800">
+                <Link
+                  href={`/inbox/${email.toAddress}`}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-violet-400 transition-colors"
+                >
+                  <ArrowLeft className="h-3 w-3" />
+                  <span className="font-mono truncate max-w-[200px] sm:max-w-xs">{email.toAddress}</span>
+                </Link>
+                <div className="flex items-center gap-1">
+                  {/* View mode toggle */}
+                  {email.htmlBody && email.textBody && (
+                    <div className="flex items-center rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden mr-1">
                       <button
-                        onClick={() => handleCopy(email.fromAddress, "địa chỉ")}
-                        className="text-slate-300 hover:text-violet-400 transition-colors shrink-0"
+                        onClick={() => setViewMode("html")}
+                        className={`px-2 py-0.5 text-[11px] font-medium transition-colors ${viewMode === "html" ? "bg-violet-600 text-white" : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}
                       >
-                        <Copy className="h-3 w-3" />
+                        HTML
+                      </button>
+                      <button
+                        onClick={() => setViewMode("text")}
+                        className={`px-2 py-0.5 text-[11px] font-medium transition-colors ${viewMode === "text" ? "bg-violet-600 text-white" : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}
+                      >
+                        Văn bản
                       </button>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-12 shrink-0 text-xs font-semibold text-slate-400 uppercase tracking-wide">Đến</span>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Mail className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-                      <span className="font-mono text-slate-700 dark:text-slate-200 truncate">{email.toAddress}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-12 shrink-0 text-xs font-semibold text-slate-400 uppercase tracking-wide">Lúc</span>
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <span className="text-slate-600 dark:text-slate-300">
-                        {new Date(email.receivedAt).toLocaleString("vi-VN")}
-                      </span>
-                      <span className="text-slate-400 text-xs">
-                        ({formatDistanceToNow(new Date(email.receivedAt), { addSuffix: true })})
-                      </span>
-                    </div>
-                  </div>
-                  {email.hasAttachments && (
-                    <div className="flex items-center gap-2">
-                      <span className="w-12 shrink-0 text-xs font-semibold text-slate-400 uppercase tracking-wide"></span>
-                      <div className="flex items-center gap-1.5 text-amber-500">
-                        <Paperclip className="h-3.5 w-3.5 shrink-0" />
-                        <span className="text-xs font-medium">Có tệp đính kèm (chưa hỗ trợ xem)</span>
-                      </div>
-                    </div>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDelete}
+                    disabled={deleteEmail.isPending}
+                    className="h-6 w-6 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    title="Xoá email"
+                  >
+                    {deleteEmail.isPending
+                      ? <RefreshCw className="h-3 w-3 animate-spin" />
+                      : <Trash2 className="h-3 w-3" />}
+                  </Button>
                 </div>
+              </div>
 
-                {/* View mode toggle (only show if both html+text exist) */}
-                {email.htmlBody && email.textBody && (
-                  <div className="flex items-center gap-1 pt-1">
-                    <span className="text-xs text-slate-400 mr-2">Xem dạng:</span>
-                    <button
-                      onClick={() => setViewMode("html")}
-                      className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${viewMode === "html" ? "bg-violet-600 text-white" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"}`}
-                    >
-                      HTML
-                    </button>
-                    <button
-                      onClick={() => setViewMode("text")}
-                      className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${viewMode === "text" ? "bg-violet-600 text-white" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"}`}
-                    >
-                      Văn bản
-                    </button>
-                  </div>
+              {/* Subject */}
+              <div className="px-4 pt-3 pb-2.5">
+                <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
+                  {email.subject || <span className="italic text-slate-400 font-normal">(Không có tiêu đề)</span>}
+                </h1>
+              </div>
+
+              {/* Meta row */}
+              <div className="px-4 pb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                <span className="flex items-center gap-1 min-w-0">
+                  <span className="text-slate-400 font-semibold uppercase tracking-wide">Từ</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-200 truncate max-w-[180px]">{email.fromAddress}</span>
+                  <button onClick={() => handleCopy(email.fromAddress)} className="text-slate-300 hover:text-violet-400 transition-colors ml-0.5" title="Copy">
+                    <Copy className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+
+                <ChevronRight className="h-3 w-3 text-slate-300 hidden sm:block" />
+
+                <span className="flex items-center gap-1 min-w-0">
+                  <span className="text-slate-400 font-semibold uppercase tracking-wide">Đến</span>
+                  <span className="font-mono text-slate-600 dark:text-slate-300 truncate max-w-[180px]">{email.toAddress}</span>
+                </span>
+
+                <span className="flex items-center gap-1 text-slate-400 ml-auto">
+                  <Clock className="h-3 w-3 shrink-0" />
+                  <span>{formatDistanceToNow(new Date(email.receivedAt), { addSuffix: true })}</span>
+                  <span className="hidden sm:inline text-slate-300">·</span>
+                  <span className="hidden sm:inline">{new Date(email.receivedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}</span>
+                </span>
+
+                {email.hasAttachments && (
+                  <span className="flex items-center gap-1 text-amber-500">
+                    <Paperclip className="h-3 w-3 shrink-0" />
+                    <span>Đính kèm</span>
+                  </span>
                 )}
               </div>
             </div>
 
-            {/* Ad — between header and body */}
+            {/* Ad between header and body */}
             <AdRenderer placement="email_body" />
 
             {/* Email body */}
             <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur rounded-xl border border-white/20 shadow-xl shadow-black/20 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5" /> Nội dung email
+              <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1">
+                  <Mail className="h-3 w-3" /> Nội dung email
                 </span>
                 {email.htmlBody && (
                   <a
                     href={`data:text/html;charset=utf-8,${encodeURIComponent(email.htmlBody)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-violet-400 transition-colors"
-                    title="Mở trong tab mới"
+                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-violet-400 transition-colors"
                   >
-                    <ExternalLink className="h-3.5 w-3.5" /> Mở rộng
+                    <ExternalLink className="h-3 w-3" /> Mở rộng
                   </a>
                 )}
               </div>
@@ -191,10 +174,10 @@ export default function EmailView() {
                   srcDoc={email.htmlBody}
                   sandbox=""
                   className="w-full border-0 bg-white"
-                  style={{ height: "560px" }}
+                  style={{ height: "540px" }}
                 />
               ) : (
-                <div className="p-5 sm:p-6">
+                <div className="p-5">
                   <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words font-mono leading-relaxed">
                     {email.textBody || email.htmlBody?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || "Không có nội dung"}
                   </pre>
@@ -202,7 +185,6 @@ export default function EmailView() {
               )}
             </div>
 
-            {/* Ad — below email content */}
             <AdRenderer placement="inbox_top" />
           </>
         )}
