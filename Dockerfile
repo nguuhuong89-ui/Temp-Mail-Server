@@ -37,8 +37,6 @@ EXPOSE 80
 FROM node:24-slim AS api
 RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 WORKDIR /app
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
 COPY --from=build /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=build /app/artifacts/api-server/package.json ./artifacts/api-server/
 COPY --from=build /app/lib ./lib
