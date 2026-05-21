@@ -4,6 +4,7 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useInboxStream } from "@/hooks/use-inbox-stream";
 import {
   useCreateRandomInbox,
+  useCreateCustomInbox,
   useGetInbox,
   useExtendInbox,
   useDeleteInboxEmail,
@@ -14,7 +15,9 @@ import {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Mail, Copy, Trash2, ChevronLeft, ChevronRight, Paperclip, ExternalLink } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RefreshCw, Mail, Copy, Trash2, ChevronLeft, ChevronRight, Paperclip, ExternalLink, Search, Wand2, AtSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdRenderer } from "@/components/ad-renderer";
 import { Link, useParams, useLocation } from "wouter";
@@ -76,6 +79,7 @@ export default function Home() {
   });
   const { data: publicDomains } = useListPublicDomains();
   const createRandom = useCreateRandomInbox();
+  const createCustom = useCreateCustomInbox();
   const extend = useExtendInbox();
   const deleteEmail = useDeleteInboxEmail();
   const clearEmails = useClearInboxEmails();
@@ -83,6 +87,14 @@ export default function Home() {
   const [selectedDomainId, setSelectedDomainId] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  // Check inbox by email
+  const [checkEmailInput, setCheckEmailInput] = useState("");
+
+  // Custom inbox dialog
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
+  const [customUsername, setCustomUsername] = useState("");
+  const [customDomainId, setCustomDomainId] = useState<string>("");
 
   // 2FA state
   const [totpSecret, setTotpSecret] = useState("");
@@ -120,6 +132,46 @@ export default function Home() {
       },
     );
   };
+
+  const handleCheckEmail = () => {
+    const trimmed = checkEmailInput.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes("@")) {
+      toast({ title: "Địa chỉ email không hợp lệ", variant: "destructive" });
+      return;
+    }
+    setLocalAddress(trimmed);
+    setLocation(`/inbox/${trimmed}`);
+    setCheckEmailInput("");
+  };
+
+  const handleCreateCustom = () => {
+    const username = customUsername.trim().toLowerCase();
+    if (!username || !customDomainId) {
+      toast({ title: "Vui lòng nhập username và chọn domain", variant: "destructive" });
+      return;
+    }
+    createCustom.mutate(
+      { data: { localPart: username, domainId: parseInt(customDomainId, 10) } },
+      {
+        onSuccess: (data) => {
+          setLocalAddress(data.address);
+          window.history.pushState({}, "", `/inbox/${data.address}`);
+          setCustomDialogOpen(false);
+          setCustomUsername("");
+          toast({ title: "Đã tạo inbox tùy chỉnh", description: data.address });
+        },
+        onError: (e: Error) => {
+          toast({ title: "Tạo inbox thất bại", description: e.message, variant: "destructive" });
+        },
+      },
+    );
+  };
+
+  // Derived: selected domain name for preview
+  const customDomain = publicDomains?.find((d) => String(d.id) === customDomainId);
+  const customPreview = customUsername && customDomain
+    ? `${customUsername.trim().toLowerCase()}@${customDomain.name}`
+    : null;
 
   const handleCopyAddress = () => {
     if (!address) return;
@@ -309,6 +361,18 @@ export default function Home() {
               </Button>
               <Button
                 size="sm"
+                className="bg-emerald-500 hover:bg-emerald-400 text-white border-0 shadow-sm shadow-emerald-500/30 font-semibold"
+                onClick={() => {
+                  if (publicDomains && publicDomains.length > 0 && !customDomainId) {
+                    setCustomDomainId(String(publicDomains[0].id));
+                  }
+                  setCustomDialogOpen(true);
+                }}
+              >
+                <Wand2 className="h-3.5 w-3.5 mr-1" /> Tạo Inbox Tùy Chỉnh
+              </Button>
+              <Button
+                size="sm"
                 className="bg-rose-500 hover:bg-rose-400 text-white border-0 shadow-sm shadow-rose-500/30 font-semibold"
                 onClick={handleDeleteAll}
                 disabled={!address || clearEmails.isPending || totalEmails === 0}
@@ -320,6 +384,31 @@ export default function Home() {
                   <RefreshCw className={`h-3.5 w-3.5 mr-1 ${extend.isPending ? "animate-spin" : ""}`} /> +10 phút
                 </Button>
               )}
+            </div>
+
+            {/* Check inbox by email address */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-sm font-semibold shrink-0 text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <Search className="h-3.5 w-3.5" /> Xem inbox:
+              </span>
+              <div className="flex-1 flex gap-2">
+                <Input
+                  value={checkEmailInput}
+                  onChange={(e) => setCheckEmailInput(e.target.value)}
+                  placeholder="nhập email bất kỳ, vd: alice@tempmail.local"
+                  className="flex-1 h-8 text-sm font-mono border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus-visible:ring-violet-500"
+                  onKeyDown={(e) => { if (e.key === "Enter") handleCheckEmail(); }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 shrink-0 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                  onClick={handleCheckEmail}
+                  disabled={!checkEmailInput.trim()}
+                >
+                  <Search className="h-3.5 w-3.5 mr-1" /> Xem
+                </Button>
+              </div>
             </div>
 
             {/* Inbox label row: 2FA + custom domain */}
@@ -497,6 +586,79 @@ export default function Home() {
       </div>
 
       <AddDomainDialog open={addDomainOpen} onClose={() => setAddDomainOpen(false)} />
+
+      {/* Custom Inbox Dialog */}
+      <Dialog open={customDialogOpen} onOpenChange={(o) => { setCustomDialogOpen(o); if (!o) setCustomUsername(""); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AtSign className="h-5 w-5 text-violet-500" />
+              Tạo Inbox Tùy Chỉnh
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Chọn username và domain để tạo địa chỉ email riêng của bạn.
+            </p>
+
+            <div className="space-y-2">
+              <Label>Username</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="vd: alice, myname, test123"
+                  value={customUsername}
+                  onChange={(e) => setCustomUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._+-]/g, ""))}
+                  className="flex-1 font-mono"
+                  onKeyDown={(e) => { if (e.key === "Enter") handleCreateCustom(); }}
+                  autoFocus
+                />
+                <span className="text-muted-foreground font-medium shrink-0">@</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Chỉ chứa chữ thường, số, dấu chấm, gạch dưới.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Domain</Label>
+              {publicDomains && publicDomains.length > 0 ? (
+                <Select value={customDomainId} onValueChange={setCustomDomainId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn domain…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {publicDomains.map((d) => (
+                      <SelectItem key={d.id} value={String(d.id)}>
+                        @{d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Chưa có domain public nào.</p>
+              )}
+            </div>
+
+            {/* Preview */}
+            {customPreview && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800">
+                <Mail className="h-4 w-4 text-violet-500 shrink-0" />
+                <span className="font-mono text-sm font-semibold text-violet-700 dark:text-violet-300 break-all">
+                  {customPreview}
+                </span>
+              </div>
+            )}
+
+            <Button
+              className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 font-semibold"
+              onClick={handleCreateCustom}
+              disabled={createCustom.isPending || !customUsername.trim() || !customDomainId}
+            >
+              {createCustom.isPending
+                ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Đang tạo...</>
+                : <><Wand2 className="h-4 w-4 mr-2" /> Tạo inbox</>}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PublicLayout>
   );
 }
