@@ -21,13 +21,16 @@ ARG VITE_CLERK_PUBLISHABLE_KEY
 ARG VITE_CLERK_PROXY_URL
 ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 ENV VITE_CLERK_PROXY_URL=$VITE_CLERK_PROXY_URL
+# Required by vite.config.ts at build time
+ENV PORT=3000
+ENV BASE_PATH=/
 COPY . .
 RUN pnpm -w run typecheck:libs \
  && pnpm --filter @workspace/api-server run build \
  && pnpm --filter @workspace/tempmail run build
 
 FROM nginx:alpine AS web
-COPY --from=build /app/artifacts/tempmail/dist /usr/share/nginx/html
+COPY --from=build /app/artifacts/tempmail/dist/public /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
