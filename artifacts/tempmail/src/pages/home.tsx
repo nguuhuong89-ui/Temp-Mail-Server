@@ -155,8 +155,8 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // Check inbox by email
-  const [checkEmailInput, setCheckEmailInput] = useState("");
+  // Editable email field — mirrors address, but user can type a new one
+  const [emailInputValue, setEmailInputValue] = useState(address || "");
 
   // Custom inbox dialog
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
@@ -199,6 +199,9 @@ export default function Home() {
   // Reset page when inbox changes
   useEffect(() => { setPage(1); }, [address]);
 
+  // Keep email input in sync when address changes (generate/custom/navigate)
+  useEffect(() => { setEmailInputValue(address || ""); }, [address]);
+
   // Auto-select first domain when list loads
   useEffect(() => {
     if (publicDomains && publicDomains.length > 0 && !customDomainId) {
@@ -220,14 +223,18 @@ export default function Home() {
   };
 
   const handleCheckEmail = () => {
-    const trimmed = checkEmailInput.trim().toLowerCase();
+    const trimmed = emailInputValue.trim().toLowerCase();
     if (!trimmed || !trimmed.includes("@")) {
       toast({ title: "Địa chỉ email không hợp lệ", variant: "destructive" });
       return;
     }
+    if (trimmed === address) {
+      // Same address — just refresh
+      queryClient.invalidateQueries({ queryKey: getGetInboxQueryKey(trimmed) });
+      return;
+    }
     setLocalAddress(trimmed);
     setLocation(`/inbox/${trimmed}`);
-    setCheckEmailInput("");
   };
 
   const handleCreateCustom = () => {
@@ -394,9 +401,17 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <label className="text-sm font-semibold shrink-0 sm:w-14 text-slate-600 dark:text-slate-400">Email:</label>
               <div className="flex-1 flex items-center gap-2">
-                <div className="flex-1 px-3 py-2 border border-indigo-200 dark:border-indigo-900/60 rounded-lg text-sm font-mono bg-indigo-50/50 dark:bg-indigo-950/30 truncate select-all text-slate-800 dark:text-slate-100">
-                  {address || <span className="text-slate-400 dark:text-slate-500 italic">— chưa có inbox —</span>}
-                </div>
+                <input
+                  type="text"
+                  value={emailInputValue}
+                  onChange={(e) => setEmailInputValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleCheckEmail(); }}
+                  placeholder="nhập email bất kỳ, vd: alice@tempmail.local"
+                  className="flex-1 px-3 py-2 border border-indigo-200 dark:border-indigo-900/60 rounded-lg text-sm font-mono bg-indigo-50/50 dark:bg-indigo-950/30 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                  spellCheck={false}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                />
                 {address && (
                   <span className={`px-2.5 py-1 text-xs font-bold rounded-full tracking-wide shrink-0 ${isOnline ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-500/20 text-slate-400 border border-slate-500/30"}`}>
                     {isOnline ? "● Online" : "○ Offline"}
@@ -435,8 +450,8 @@ export default function Home() {
               <Button
                 size="sm"
                 className="bg-sky-500 hover:bg-sky-400 text-white border-0 shadow-sm shadow-sky-500/30 font-semibold"
-                onClick={() => address && queryClient.invalidateQueries({ queryKey: getGetInboxQueryKey(address) })}
-                disabled={!address || isLoading}
+                onClick={handleCheckEmail}
+                disabled={!emailInputValue.trim() || isLoading}
               >
                 <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isLoading ? "animate-spin" : ""}`} /> Check Inbox
               </Button>
@@ -489,31 +504,6 @@ export default function Home() {
                   <RefreshCw className={`h-3.5 w-3.5 mr-1 ${extend.isPending ? "animate-spin" : ""}`} /> +10 phút
                 </Button>
               )}
-            </div>
-
-            {/* Check inbox by email address */}
-            <div className="flex items-center gap-2 pt-1">
-              <span className="text-sm font-semibold shrink-0 text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <Search className="h-3.5 w-3.5" /> Xem inbox:
-              </span>
-              <div className="flex-1 flex gap-2">
-                <Input
-                  value={checkEmailInput}
-                  onChange={(e) => setCheckEmailInput(e.target.value)}
-                  placeholder="nhập email bất kỳ, vd: alice@tempmail.local"
-                  className="flex-1 h-8 text-sm font-mono border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus-visible:ring-violet-500"
-                  onKeyDown={(e) => { if (e.key === "Enter") handleCheckEmail(); }}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 shrink-0 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
-                  onClick={handleCheckEmail}
-                  disabled={!checkEmailInput.trim()}
-                >
-                  <Search className="h-3.5 w-3.5 mr-1" /> Xem
-                </Button>
-              </div>
             </div>
 
             {/* Inbox label row: 2FA + custom domain */}
