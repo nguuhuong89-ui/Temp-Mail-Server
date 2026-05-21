@@ -17,18 +17,85 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Mail, Copy, Trash2, ChevronLeft, ChevronRight, Paperclip, ExternalLink, Search, Wand2, AtSign } from "lucide-react";
+import { RefreshCw, Mail, Copy, Trash2, ChevronLeft, ChevronRight, Paperclip, ExternalLink, Search, Wand2, AtSign, Bookmark, BookmarkCheck, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdRenderer } from "@/components/ad-renderer";
 import { Link, useParams, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api-fetch";
 import { useQuery } from "@tanstack/react-query";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
+const AD_DURATION = 5;
+
+function AdWallModal({ open, onComplete, onClose }: { open: boolean; onComplete: () => void; onClose: () => void }) {
+  const [countdown, setCountdown] = useState(AD_DURATION);
+  const [done, setDone] = useState(false);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!open) { setCountdown(AD_DURATION); setDone(false); return; }
+    setCountdown(AD_DURATION);
+    setDone(false);
+    timerRef.current = window.setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          window.clearInterval(timerRef.current!);
+          setDone(true);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Play className="h-4 w-4 text-amber-500" />
+            Xem quảng cáo để tiếp tục
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Fake ad banner */}
+        <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+          <div className="px-4 py-6 text-center space-y-2">
+            <div className="text-2xl font-black text-amber-600 dark:text-amber-400 tracking-tight">🔥 FLASH SALE</div>
+            <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Giảm đến <span className="text-orange-600 font-black text-lg">70%</span> tất cả sản phẩm</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">Ưu đãi có hạn — Chỉ hôm nay!</div>
+            <div className="mt-3 inline-block px-4 py-1.5 rounded-full bg-amber-500 text-white text-xs font-bold shadow-md shadow-amber-400/40">
+              MUA NGAY →
+            </div>
+          </div>
+          {/* Countdown badge */}
+          {!done && (
+            <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/70 text-white text-xs font-mono font-bold">
+              {countdown}s
+            </div>
+          )}
+        </div>
+
+        <p className="text-xs text-center text-slate-400 dark:text-slate-500">
+          Quảng cáo giúp duy trì dịch vụ miễn phí cho bạn.
+        </p>
+
+        <Button
+          className={`w-full font-semibold transition-all ${done ? "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 shadow-md shadow-violet-500/30" : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"}`}
+          disabled={!done}
+          onClick={() => { onComplete(); onClose(); }}
+        >
+          {done ? "✓ Hoàn tất — Nhận thưởng" : `Bỏ qua sau ${countdown}s…`}
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function AddDomainDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data: me } = useQuery({
@@ -108,6 +175,18 @@ export default function Home() {
 
   // Add domain dialog
   const [addDomainOpen, setAddDomainOpen] = useState(false);
+
+  // Ad wall
+  const [adWallOpen, setAdWallOpen] = useState(false);
+  const adPendingAction = useRef<(() => void) | null>(null);
+  const openAdWall = useCallback((action: () => void) => {
+    adPendingAction.current = action;
+    setAdWallOpen(true);
+  }, []);
+
+  // Saved emails (localStorage)
+  const [savedEmails, setSavedEmails] = useLocalStorage<string[]>("tempmail_saved", []);
+  const isSaved = !!(address && savedEmails.includes(address));
 
   useInboxStream(address || undefined);
 
@@ -221,13 +300,31 @@ export default function Home() {
     );
   };
 
-  const handleExtend = () => {
+  const doExtend = useCallback(() => {
     if (!address) return;
     extend.mutate({ address }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetInboxQueryKey(address) });
-        toast({ title: "Đã gia hạn thêm 10 phút" });
+        toast({ title: "✅ Đã gia hạn thêm 10 phút" });
       },
+    });
+  }, [address, extend, queryClient, toast]);
+
+  const handleExtend = () => {
+    if (!address) return;
+    openAdWall(doExtend);
+  };
+
+  const handleSaveEmail = () => {
+    if (!address) return;
+    if (isSaved) {
+      setSavedEmails(savedEmails.filter((e) => e !== address));
+      toast({ title: "Đã bỏ lưu email" });
+      return;
+    }
+    openAdWall(() => {
+      setSavedEmails([address, ...savedEmails.filter((e) => e !== address)]);
+      toast({ title: "✅ Đã lưu email", description: address });
     });
   };
 
@@ -374,6 +471,19 @@ export default function Home() {
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete All Mail
               </Button>
+              {address && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSaveEmail}
+                  className={`border font-semibold transition-colors ${isSaved ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50" : "border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+                  title={isSaved ? "Bỏ lưu email này" : "Lưu email để dùng lại"}
+                >
+                  {isSaved
+                    ? <><BookmarkCheck className="h-3.5 w-3.5 mr-1" /> Đã lưu</>
+                    : <><Bookmark className="h-3.5 w-3.5 mr-1" /> Lưu Email</>}
+                </Button>
+              )}
               {address && (
                 <Button size="sm" variant="outline" onClick={handleExtend} disabled={extend.isPending} className="border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">
                   <RefreshCw className={`h-3.5 w-3.5 mr-1 ${extend.isPending ? "animate-spin" : ""}`} /> +10 phút
@@ -581,6 +691,12 @@ export default function Home() {
       </div>
 
       <AddDomainDialog open={addDomainOpen} onClose={() => setAddDomainOpen(false)} />
+
+      <AdWallModal
+        open={adWallOpen}
+        onComplete={() => { adPendingAction.current?.(); adPendingAction.current = null; }}
+        onClose={() => { setAdWallOpen(false); adPendingAction.current = null; }}
+      />
 
       {/* Custom Inbox Dialog */}
       <Dialog open={customDialogOpen} onOpenChange={(o) => { setCustomDialogOpen(o); if (!o) setCustomUsername(""); }}>
