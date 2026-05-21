@@ -292,63 +292,34 @@ export default function Home() {
           {/* Accent top bar */}
           <div className="h-1 bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-500" />
 
-          {/* Email row — inline editable */}
+          {/* Email row */}
           <div className="p-4 border-b border-slate-200 dark:border-slate-700/60 space-y-3">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <label className="text-sm font-semibold shrink-0 sm:w-14 text-slate-600 dark:text-slate-400">Email:</label>
-
-              {/* Inline username + domain composer */}
-              <div className="flex-1 flex items-center gap-0 border border-indigo-200 dark:border-indigo-900/60 rounded-lg overflow-hidden bg-indigo-50/50 dark:bg-indigo-950/30 focus-within:ring-2 focus-within:ring-violet-500 focus-within:border-transparent transition-all">
-                <input
-                  type="text"
-                  value={customUsername}
-                  onChange={(e) => setCustomUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._+-]/g, ""))}
-                  placeholder={address ? address.split("@")[0] : "username"}
-                  className="flex-1 min-w-0 px-3 py-2 text-sm font-mono bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                  onKeyDown={(e) => { if (e.key === "Enter") handleCreateCustom(); }}
-                />
-                <span className="px-1 text-slate-400 dark:text-slate-500 font-medium text-sm select-none">@</span>
-                <select
-                  value={customDomainId}
-                  onChange={(e) => setCustomDomainId(e.target.value)}
-                  className="pr-2 pl-1 py-2 text-sm font-mono bg-transparent outline-none text-slate-700 dark:text-slate-300 border-l border-indigo-200 dark:border-indigo-900/60 cursor-pointer"
-                >
-                  {publicDomains?.map((d) => (
-                    <option key={d.id} value={String(d.id)}>{d.name}</option>
-                  ))}
-                </select>
-                <Button
-                  size="sm"
-                  className="rounded-none rounded-r-lg h-full px-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 text-white text-xs font-semibold shrink-0"
-                  onClick={handleCreateCustom}
-                  disabled={createCustom.isPending || !customUsername.trim() || !customDomainId}
-                  title="Tạo hoặc mở inbox"
-                >
-                  {createCustom.isPending
-                    ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                    : <><Wand2 className="h-3.5 w-3.5 mr-1" />Tạo / Mở</>}
-                </Button>
+              <div className="flex-1 flex items-center gap-2">
+                <div className="flex-1 px-3 py-2 border border-indigo-200 dark:border-indigo-900/60 rounded-lg text-sm font-mono bg-indigo-50/50 dark:bg-indigo-950/30 truncate select-all text-slate-800 dark:text-slate-100">
+                  {address || <span className="text-slate-400 dark:text-slate-500 italic">— chưa có inbox —</span>}
+                </div>
+                {address && (
+                  <span className={`px-2.5 py-1 text-xs font-bold rounded-full tracking-wide shrink-0 ${isOnline ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-500/20 text-slate-400 border border-slate-500/30"}`}>
+                    {isOnline ? "● Online" : "○ Offline"}
+                  </span>
+                )}
               </div>
-
-              {address && (
-                <span className={`shrink-0 px-2.5 py-1 text-xs font-bold rounded-full tracking-wide ${isOnline ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-500/20 text-slate-400 border border-slate-500/30"}`}>
-                  {isOnline ? "● Online" : "○ Offline"}
-                </span>
-              )}
             </div>
 
-            {/* Current address display + URL */}
             {address && (
-              <div className="flex items-center gap-2 flex-wrap text-xs">
-                <span className="font-mono text-indigo-700 dark:text-indigo-300 font-semibold select-all">{address}</span>
-                <button onClick={handleCopyAddress} className="text-slate-400 hover:text-amber-500 transition-colors" title="Copy email">
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
-                <span className="text-slate-300 dark:text-slate-600">·</span>
-                <a href={shareUrl} className="text-indigo-500 dark:text-indigo-400 hover:underline font-mono truncate max-w-xs" target="_blank" rel="noopener noreferrer">
+              <div className="flex items-center gap-2 text-sm flex-wrap">
+                <span className="font-semibold text-violet-600 dark:text-violet-400 shrink-0">URL Email:</span>
+                <a
+                  href={shareUrl}
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline break-all font-mono text-xs"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {shareUrl}
                 </a>
-                <button onClick={handleCopyUrl} className="text-slate-400 hover:text-violet-500 transition-colors" title="Copy URL">
+                <button onClick={handleCopyUrl} className="text-slate-400 hover:text-violet-500 shrink-0 transition-colors">
                   <Copy className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -356,6 +327,14 @@ export default function Home() {
 
             {/* Action buttons */}
             <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                className="bg-amber-400 hover:bg-amber-300 text-amber-950 border-0 shadow-sm shadow-amber-400/30 font-semibold"
+                onClick={handleCopyAddress}
+                disabled={!address}
+              >
+                <Copy className="h-3.5 w-3.5 mr-1" /> Copy Email
+              </Button>
               <Button
                 size="sm"
                 className="bg-sky-500 hover:bg-sky-400 text-white border-0 shadow-sm shadow-sky-500/30 font-semibold"
@@ -373,7 +352,19 @@ export default function Home() {
                 {createRandom.isPending
                   ? <RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" />
                   : <Mail className="h-3.5 w-3.5 mr-1" />}
-                Random Email
+                Generate New Email
+              </Button>
+              <Button
+                size="sm"
+                className="bg-emerald-500 hover:bg-emerald-400 text-white border-0 shadow-sm shadow-emerald-500/30 font-semibold"
+                onClick={() => {
+                  if (publicDomains && publicDomains.length > 0 && !customDomainId) {
+                    setCustomDomainId(String(publicDomains[0].id));
+                  }
+                  setCustomDialogOpen(true);
+                }}
+              >
+                <Wand2 className="h-3.5 w-3.5 mr-1" /> Tạo Inbox Tùy Chỉnh
               </Button>
               <Button
                 size="sm"
@@ -381,13 +372,38 @@ export default function Home() {
                 onClick={handleDeleteAll}
                 disabled={!address || clearEmails.isPending || totalEmails === 0}
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1" /> Xóa tất cả
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete All Mail
               </Button>
               {address && (
                 <Button size="sm" variant="outline" onClick={handleExtend} disabled={extend.isPending} className="border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">
                   <RefreshCw className={`h-3.5 w-3.5 mr-1 ${extend.isPending ? "animate-spin" : ""}`} /> +10 phút
                 </Button>
               )}
+            </div>
+
+            {/* Check inbox by email address */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-sm font-semibold shrink-0 text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <Search className="h-3.5 w-3.5" /> Xem inbox:
+              </span>
+              <div className="flex-1 flex gap-2">
+                <Input
+                  value={checkEmailInput}
+                  onChange={(e) => setCheckEmailInput(e.target.value)}
+                  placeholder="nhập email bất kỳ, vd: alice@tempmail.local"
+                  className="flex-1 h-8 text-sm font-mono border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus-visible:ring-violet-500"
+                  onKeyDown={(e) => { if (e.key === "Enter") handleCheckEmail(); }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 shrink-0 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                  onClick={handleCheckEmail}
+                  disabled={!checkEmailInput.trim()}
+                >
+                  <Search className="h-3.5 w-3.5 mr-1" /> Xem
+                </Button>
+              </div>
             </div>
 
             {/* Inbox label row: 2FA + custom domain */}
@@ -565,6 +581,74 @@ export default function Home() {
       </div>
 
       <AddDomainDialog open={addDomainOpen} onClose={() => setAddDomainOpen(false)} />
+
+      {/* Custom Inbox Dialog */}
+      <Dialog open={customDialogOpen} onOpenChange={(o) => { setCustomDialogOpen(o); if (!o) setCustomUsername(""); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AtSign className="h-5 w-5 text-violet-500" />
+              Tạo Inbox Tùy Chỉnh
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Chọn username và domain để tạo địa chỉ email riêng của bạn.
+            </p>
+            <div className="space-y-2">
+              <Label>Username</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="vd: alice, myname, test123"
+                  value={customUsername}
+                  onChange={(e) => setCustomUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._+-]/g, ""))}
+                  className="flex-1 font-mono"
+                  onKeyDown={(e) => { if (e.key === "Enter") handleCreateCustom(); }}
+                  autoFocus
+                />
+                <span className="text-muted-foreground font-medium shrink-0">@</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Chỉ chứa chữ thường, số, dấu chấm, gạch dưới.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Domain</Label>
+              {publicDomains && publicDomains.length > 0 ? (
+                <Select value={customDomainId} onValueChange={setCustomDomainId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn domain…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {publicDomains.map((d) => (
+                      <SelectItem key={d.id} value={String(d.id)}>
+                        @{d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Chưa có domain public nào.</p>
+              )}
+            </div>
+            {customPreview && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800">
+                <Mail className="h-4 w-4 text-violet-500 shrink-0" />
+                <span className="font-mono text-sm font-semibold text-violet-700 dark:text-violet-300 break-all">
+                  {customPreview}
+                </span>
+              </div>
+            )}
+            <Button
+              className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 font-semibold"
+              onClick={handleCreateCustom}
+              disabled={createCustom.isPending || !customUsername.trim() || !customDomainId}
+            >
+              {createCustom.isPending
+                ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Đang tạo...</>
+                : <><Wand2 className="h-4 w-4 mr-2" /> Tạo inbox</>}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PublicLayout>
   );
 }
