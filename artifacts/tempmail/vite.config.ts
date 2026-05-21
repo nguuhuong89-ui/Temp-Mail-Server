@@ -26,13 +26,13 @@ if (!basePath) {
   );
 }
 
-export default defineConfig({
+export default defineConfig(async ({ command }) => ({
   base: basePath,
   plugins: [
     react(),
     tailwindcss({ optimize: false }),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
+    ...(command === "serve" ? [runtimeErrorOverlay()] : []),
+    ...(command === "serve" &&
     process.env.REPL_ID !== undefined
       ? [
           await import("@replit/vite-plugin-cartographer").then((m) =>
@@ -72,4 +72,4 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
   },
-});
+}));
