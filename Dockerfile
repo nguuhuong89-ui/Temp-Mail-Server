@@ -1,4 +1,4 @@
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 WORKDIR /app
 
@@ -14,6 +14,11 @@ COPY scripts/package.json scripts/
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
+# Build-time args: baked into the frontend bundle at build time (not runtime)
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ARG VITE_CLERK_PROXY_URL
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PROXY_URL=$VITE_CLERK_PROXY_URL
 COPY . .
 RUN pnpm -w run typecheck:libs \
  && pnpm --filter @workspace/api-server run build \
@@ -24,7 +29,7 @@ COPY --from=build /app/artifacts/tempmail/dist /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
-FROM node:22-alpine AS api
+FROM node:24-alpine AS api
 RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
