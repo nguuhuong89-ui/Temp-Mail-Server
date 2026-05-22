@@ -3,13 +3,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-tempmail}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tempmail}
-      POSTGRES_DB: ${POSTGRES_DB:-tempmail}
+      POSTGRES_USER: tempmail
+      POSTGRES_PASSWORD: tempmail_strong_2025
+      POSTGRES_DB: tempmail
     volumes:
       - pgdata2:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tempmail}"]
+      test: ["CMD-SHELL", "pg_isready -U tempmail"]
       interval: 5s
       retries: 10
 
@@ -23,7 +23,7 @@ services:
         condition: service_healthy
     environment:
       # --- Database ---
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgres://tempmail:tempmail_strong_2025@postgres:5432/tempmail
       # --- Server ---
       PORT: "8080"
       NODE_ENV: production
