@@ -99,7 +99,7 @@ export default function AccountInboxes() {
                   </TableRow>
                   );
                 }))
-              )}
+              }
             </TableBody>
           </Table>
         </div>
