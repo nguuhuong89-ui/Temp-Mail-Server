@@ -13,6 +13,8 @@ import {
   Users,
   Menu,
   ChevronRight,
+  Inbox,
+  SlidersHorizontal,
 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { AdminGate, AdminLogoutButton } from "@/components/admin-gate";
@@ -23,12 +25,14 @@ const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/domains", label: "Domains", icon: Globe },
+  { href: "/admin/inboxes", label: "Inboxes", icon: Inbox },
   { href: "/admin/emails", label: "Emails", icon: Mail },
   { href: "/admin/ads", label: "Campaigns", icon: Megaphone },
   { href: "/admin/blocklist", label: "Blocklist", icon: ShieldAlert },
   { href: "/admin/api-keys", label: "API Keys", icon: Key },
   { href: "/admin/api-docs", label: "API Docs", icon: Code2 },
   { href: "/admin/setup", label: "Setup Guide", icon: Settings },
+  { href: "/admin/settings", label: "Settings", icon: SlidersHorizontal },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

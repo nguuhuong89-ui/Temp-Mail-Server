@@ -26,6 +26,8 @@ import ApiKeys from "@/pages/admin/api-keys";
 import ApiDocs from "@/pages/admin/api-docs";
 import AdminUsers from "@/pages/admin/users";
 import SetupGuide from "@/pages/admin/setup";
+import AdminInboxes from "@/pages/admin/inboxes";
+import AdminSettings from "@/pages/admin/settings";
 import AcceptableUsePage from "@/pages/acceptable-use";
 import AbusePage from "@/pages/abuse";
 
@@ -117,6 +119,8 @@ function Router() {
       <Route path="/admin/api-keys" component={ApiKeys} />
       <Route path="/admin/api-docs" component={ApiDocs} />
       <Route path="/admin/setup" component={SetupGuide} />
+      <Route path="/admin/inboxes" component={AdminInboxes} />
+      <Route path="/admin/settings" component={AdminSettings} />
 
       <Route component={NotFound} />
     </Switch>

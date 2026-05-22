@@ -10,6 +10,8 @@ import v1Router from "./v1";
 import apiKeysRouter from "./api-keys";
 import accountRouter from "./account";
 import adminUsersRouter from "./admin-users";
+import adminInboxesRouter from "./admin-inboxes";
+import adminSettingsRouter from "./admin-settings";
 import publicRouter from "./public";
 import { adminAuth } from "../middlewares/admin-auth";
 import { attachUser, requireAdmin } from "../middlewares/clerk-auth";
@@ -39,5 +41,7 @@ router.use(adsRouter);
 router.use(statsRouter);
 router.use(blocklistRouter);
 router.use(apiKeysRouter);
+router.use(adminInboxesRouter);
+router.use(adminSettingsRouter);
 
 export default router;
