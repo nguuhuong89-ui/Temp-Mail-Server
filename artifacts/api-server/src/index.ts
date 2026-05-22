@@ -28,8 +28,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = path.resolve(__dirname, "../../../migrations");
 
 logger.info({ migrationsFolder }, "Running database migrations");
-await migrate(db, { migrationsFolder });
-logger.info("Database migrations complete");
+try {
+  await migrate(db, { migrationsFolder });
+  logger.info("Database migrations complete");
+} catch (err) {
+  logger.error({ err, migrationsFolder }, "Database migration failed — tables may not exist");
+}
 
 app.listen(port, (err) => {
   if (err) {
