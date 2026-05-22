@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: tempmail
-      POSTGRES_PASSWORD: tempmail_strong_2025
+      POSTGRES_PASSWORD: tempmail
       POSTGRES_DB: tempmail
     volumes:
       - pgdata2:/var/lib/postgresql/data
@@ -23,7 +23,7 @@ services:
         condition: service_healthy
     environment:
       # --- Database ---
-      DATABASE_URL: postgres://tempmail:tempmail_strong_2025@postgres:5432/tempmail
+      DATABASE_URL: postgres://tempmail:tempmail@postgres:5432/tempmail
       # --- Server ---
       PORT: "8080"
       NODE_ENV: production
