@@ -8,48 +8,43 @@ import { initDb } from "./lib/db-init";
 assertProductionAdminConfig();
 
 const rawPort = process.env["PORT"];
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
+if (!rawPort) throw new Error("PORT environment variable is required but was not provided.");
 
 const port = Number(rawPort);
+if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT value: "${rawPort}"`);
 
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-logger.info("Initialising database schema");
-try {
-  await initDb();
-  logger.info("Database schema ready");
-} catch (err) {
-  logger.error({ err }, "Database init failed — tables may not exist");
-}
-
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-  logger.info({ port }, "HTTP server listening");
-});
-
-// Set SMTP_PORT=0 (or any non-positive value) to disable the embedded SMTP
-// listener. Replit Autoscale/VM deployments cannot accept inbound SMTP
-// (port 25 is not exposed publicly), so the listener is only useful in
-// self-host (Docker) or local dev.
-const smtpPort = Number(process.env["SMTP_PORT"] ?? 2525);
-if (!Number.isNaN(smtpPort) && smtpPort > 0) {
+async function main() {
+  logger.info("Initialising database schema");
   try {
-    startSmtpServer(smtpPort);
+    await initDb();
+    logger.info("Database schema ready");
   } catch (err) {
-    logger.error({ err, smtpPort }, "Failed to start SMTP server");
+    logger.error({ err }, "Database init failed — tables may not exist, continuing anyway");
   }
-} else {
-  logger.info({ smtpPort }, "SMTP server disabled (SMTP_PORT<=0)");
+
+  app.listen(port, (err?: Error) => {
+    if (err) {
+      logger.error({ err }, "Error listening on port");
+      process.exit(1);
+    }
+    logger.info({ port }, "HTTP server listening");
+  });
+
+  const smtpPort = Number(process.env["SMTP_PORT"] ?? 2525);
+  if (!Number.isNaN(smtpPort) && smtpPort > 0) {
+    try {
+      startSmtpServer(smtpPort);
+    } catch (err) {
+      logger.error({ err, smtpPort }, "Failed to start SMTP server");
+    }
+  } else {
+    logger.info({ smtpPort }, "SMTP server disabled (SMTP_PORT<=0)");
+  }
+
+  startCleanupJob();
 }
 
-startCleanupJob();
+main().catch((err) => {
+  logger.error({ err }, "Fatal startup error");
+  process.exit(1);
+});
