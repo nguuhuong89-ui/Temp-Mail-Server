@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Mail, Copy, Trash2, ChevronLeft, ChevronRight, Paperclip, ExternalLink, Search, Wand2, AtSign, Bookmark, BookmarkCheck, Play, Pin, X, History } from "lucide-react";
+import { RefreshCw, Mail, Copy, Trash2, ChevronLeft, ChevronRight, Paperclip, ExternalLink, Search, Wand2, AtSign, Bookmark, BookmarkCheck, Play, Pin, X, History, KeyRound, Link2, Timer, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdRenderer } from "@/components/ad-renderer";
 import { Link, useParams, useLocation } from "wouter";
@@ -29,6 +29,23 @@ import { apiFetch } from "@/lib/api-fetch";
 import { useQuery } from "@tanstack/react-query";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
+const AUTO_ROTATE_MS = 10 * 60 * 1000;
+
+type QuickItem = { type: "otp"; value: string } | { type: "link"; value: string };
+function extractQuickData(text: string): QuickItem[] {
+  const results: QuickItem[] = [];
+  const ctxOtp = text.match(/(?:code|otp|pin|token|passcode|m[aã]|xác)[\s:=\-]*(\d{4,8})\b/i);
+  if (ctxOtp?.[1]) {
+    results.push({ type: "otp", value: ctxOtp[1] });
+  } else {
+    const bare = (text.match(/\b\d{4,8}\b/g) ?? []).find((n) => !/^(19|20)\d{2}$/.test(n));
+    if (bare) results.push({ type: "otp", value: bare });
+  }
+  const urls = text.match(/https?:\/\/[^\s"'<>\]\)]+/g) ?? [];
+  const link = urls.find((u) => /verif|confirm|activat|reset|click|magic|approv|auth|unsub/i.test(u));
+  if (link) results.push({ type: "link", value: link });
+  return results;
+}
 const AD_DURATION = 5;
 
 function AdWallModal({ open, onComplete, onClose }: { open: boolean; onComplete: () => void; onClose: () => void }) {
@@ -163,6 +180,10 @@ export default function Home() {
   const [customUsername, setCustomUsername] = useState("");
   const [customDomainId, setCustomDomainId] = useState<string>("");
 
+  // Auto-rotate timer
+  const lastAddressChangedAt = useRef(Date.now());
+  const [autoRotateCountdown, setAutoRotateCountdown] = useState<number | null>(null);
+
   // 2FA state
   const [totpSecret, setTotpSecret] = useState("");
   const [totpCode, setTotpCode] = useState<string | null>(null);
@@ -198,6 +219,44 @@ export default function Home() {
 
   // Reset page when inbox changes
   useEffect(() => { setPage(1); }, [address]);
+
+  // Reset auto-rotate timer when address changes
+  useEffect(() => {
+    if (address) { lastAddressChangedAt.current = Date.now(); setAutoRotateCountdown(null); }
+  }, [address]);
+
+  // Check every 30s whether 10 minutes have passed on same inbox
+  useEffect(() => {
+    if (!address) return;
+    const iv = setInterval(() => {
+      if (Date.now() - lastAddressChangedAt.current >= AUTO_ROTATE_MS) {
+        setAutoRotateCountdown((c) => (c === null ? 5 : c));
+      }
+    }, 30_000);
+    return () => clearInterval(iv);
+  }, [address]);
+
+  // Countdown tick → auto-generate when reaches 0
+  useEffect(() => {
+    if (autoRotateCountdown === null) return;
+    if (autoRotateCountdown <= 0) {
+      setAutoRotateCountdown(null);
+      createRandom.mutate(
+        { data: {} },
+        {
+          onSuccess: (data) => {
+            setLocalAddress(data.address);
+            window.history.pushState({}, "", `/inbox/${data.address}`);
+            autoSave(data.address);
+            toast({ title: "⏱ Đã tự động tạo email mới", description: data.address });
+          },
+        },
+      );
+      return;
+    }
+    const t = setTimeout(() => setAutoRotateCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(t);
+  }, [autoRotateCountdown]);
 
   // Keep email input in sync when address changes (generate/custom/navigate)
   useEffect(() => { setEmailInputValue(address || ""); }, [address]);
@@ -395,6 +454,31 @@ export default function Home() {
     <PublicLayout>
       <div className="container max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4">
         <AdRenderer placement="header" />
+
+        {/* Auto-rotate countdown banner */}
+        {autoRotateCountdown !== null && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 shadow-md">
+            <Timer className="h-5 w-5 text-amber-500 shrink-0 animate-pulse" />
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">Inbox đã quá 10 phút </span>
+              <span className="text-sm text-amber-700 dark:text-amber-300">— tự động tạo email mới sau <strong className="font-mono text-base">{autoRotateCountdown}s</strong></span>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => { setAutoRotateCountdown(null); lastAddressChangedAt.current = Date.now(); }}
+                className="text-xs px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 font-medium transition-colors"
+              >
+                Giữ lại
+              </button>
+              <button
+                onClick={() => { setAutoRotateCountdown(0); }}
+                className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white font-medium transition-colors flex items-center gap-1"
+              >
+                <Zap className="h-3 w-3" /> Tạo ngay
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Main card */}
         <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur rounded-xl border border-white/20 shadow-2xl shadow-black/30 overflow-hidden">
@@ -641,9 +725,33 @@ export default function Home() {
                         <span className="truncate block">{email.fromAddress}</span>
                       </td>
                       <td className="px-4 py-2.5 text-slate-700 dark:text-slate-300">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="truncate">{email.subject || "(No Subject)"}</span>
                           {email.hasAttachments && <Paperclip className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
+                          {extractQuickData(`${email.subject} ${email.preview}`).map((item) =>
+                            item.type === "otp" ? (
+                              <button
+                                key="otp"
+                                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.value); toast({ title: "OTP đã copy!", description: item.value }); }}
+                                className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-xs font-mono font-bold hover:bg-amber-200 dark:hover:bg-amber-800/70 border border-amber-300 dark:border-amber-700 transition-colors"
+                                title="Click để copy OTP"
+                              >
+                                <KeyRound className="h-2.5 w-2.5" /> {item.value}
+                              </button>
+                            ) : (
+                              <a
+                                key="link"
+                                href={item.value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 text-xs font-semibold hover:bg-indigo-200 dark:hover:bg-indigo-800/70 border border-indigo-300 dark:border-indigo-700 transition-colors"
+                                title="Mở link xác minh"
+                              >
+                                <Link2 className="h-2.5 w-2.5" /> Verify
+                              </a>
+                            )
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-slate-400 text-xs hidden sm:table-cell whitespace-nowrap">
