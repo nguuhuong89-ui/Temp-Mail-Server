@@ -1,12 +1,9 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startSmtpServer } from "./lib/smtp";
 import { startCleanupJob } from "./lib/cleanup";
 import { assertProductionAdminConfig } from "./middlewares/admin-auth";
-import { db } from "@workspace/db";
+import { initDb } from "./lib/db-init";
 
 assertProductionAdminConfig();
 
@@ -24,15 +21,12 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const migrationsFolder = path.resolve(__dirname, "../../../migrations");
-
-logger.info({ migrationsFolder }, "Running database migrations");
+logger.info("Initialising database schema");
 try {
-  await migrate(db, { migrationsFolder });
-  logger.info("Database migrations complete");
+  await initDb();
+  logger.info("Database schema ready");
 } catch (err) {
-  logger.error({ err, migrationsFolder }, "Database migration failed — tables may not exist");
+  logger.error({ err }, "Database init failed — tables may not exist");
 }
 
 app.listen(port, (err) => {

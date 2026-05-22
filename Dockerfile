@@ -27,8 +27,7 @@ ENV BASE_PATH=/
 COPY . .
 RUN pnpm -w run typecheck:libs \
  && pnpm --filter @workspace/api-server run build \
- && pnpm --filter @workspace/tempmail run build \
- && pnpm --filter @workspace/db run generate
+ && pnpm --filter @workspace/tempmail run build
 
 FROM nginx:alpine AS web
 COPY --from=build /app/artifacts/tempmail/dist/public /usr/share/nginx/html
@@ -42,7 +41,6 @@ COPY --from=build /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=build /app/artifacts/api-server/package.json ./artifacts/api-server/
 COPY --from=build /app/lib ./lib
 COPY --from=build /app/package.json ./
-COPY --from=build /app/lib/db/migrations ./migrations
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV SMTP_PORT=25
