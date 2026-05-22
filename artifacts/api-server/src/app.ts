@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
@@ -72,5 +72,12 @@ app.use("/api/inbox/custom", inboxLimiter);
 
 app.use("/api", authRouter);
 app.use("/api", router);
+
+// Error handler — returns JSON so DB errors are visible during diagnostics
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const message = err instanceof Error ? err.message : String(err);
+  logger.error({ err }, "Unhandled request error");
+  res.status(500).json({ error: "Internal server error", detail: message });
+});
 
 export default app;

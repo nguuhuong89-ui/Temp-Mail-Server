@@ -4,6 +4,7 @@ import { startSmtpServer } from "./lib/smtp";
 import { startCleanupJob } from "./lib/cleanup";
 import { assertProductionAdminConfig } from "./middlewares/admin-auth";
 import { initDb } from "./lib/db-init";
+import { setDbInitError } from "./lib/startup-state";
 
 assertProductionAdminConfig();
 
@@ -19,6 +20,8 @@ async function main() {
     await initDb();
     logger.info("Database schema ready");
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    setDbInitError(msg);
     logger.error({ err }, "Database init failed — tables may not exist, continuing anyway");
   }
 
