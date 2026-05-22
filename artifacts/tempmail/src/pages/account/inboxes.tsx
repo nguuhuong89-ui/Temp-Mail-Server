@@ -97,7 +97,8 @@ export default function AccountInboxes() {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                }))
               )}
             </TableBody>
           </Table>
