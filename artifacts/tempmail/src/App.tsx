@@ -85,7 +85,14 @@ function ClerkQueryClientCacheInvalidator() {
   useEffect(() => {
     return addListener(({ user }) => {
       const id = user?.id ?? null;
-      if (prev.current !== undefined && prev.current !== id) qc.clear();
+      if (prev.current !== undefined && prev.current !== id) {
+        qc.clear();
+        if (id) {
+          fetch(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/account/me`, {
+            credentials: "include",
+          }).catch(() => {});
+        }
+      }
       prev.current = id;
     });
   }, [addListener, qc]);

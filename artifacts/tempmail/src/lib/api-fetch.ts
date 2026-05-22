@@ -1,13 +1,19 @@
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+function storedAdminToken(): string | null {
+  try { return localStorage.getItem("tempmail_admin_token"); } catch { return null; }
+}
+
 export async function apiFetch<T = unknown>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
+  const adminToken = storedAdminToken();
   const res = await fetch(`${BASE}${path}`, {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...(adminToken ? { "X-Admin-Token": adminToken } : {}),
       ...(init.headers ?? {}),
     },
     ...init,
