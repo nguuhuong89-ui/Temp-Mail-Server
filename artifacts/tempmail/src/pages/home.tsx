@@ -252,7 +252,7 @@ export default function Home() {
             setLocalAddress(data.address);
             window.history.pushState({}, "", `/inbox/${data.address}`);
             autoSave(data.address);
-            toast({ title: "⏱ Đã tự động tạo email mới", description: data.address });
+            toast({ title: t("home.autoRotatedToast"), description: data.address });
           },
         },
       );
@@ -322,7 +322,7 @@ export default function Home() {
           toast({ title: t("home.customInboxTitle"), description: data.address });
         },
         onError: (e: Error) => {
-          toast({ title: "Tạo inbox thất bại", description: e.message, variant: "destructive" });
+          toast({ title: t("home.customCreateError"), description: e.message, variant: "destructive" });
         },
       },
     );
@@ -840,7 +840,7 @@ export default function Home() {
         <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-xl border border-white/20 shadow-lg shadow-black/20 p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-3">
             <div className="h-5 w-1 rounded-full bg-gradient-to-b from-violet-500 to-indigo-500" />
-            <h3 className="font-bold text-base text-slate-800 dark:text-slate-100">Important Notice</h3>
+            <h3 className="font-bold text-base text-slate-800 dark:text-slate-100">{t("home.noticeTitle")}</h3>
           </div>
           <ul className="space-y-1.5 text-sm text-slate-500 dark:text-slate-400 list-disc pl-5">
             <li>Chúng tôi không quản lý trực tiếp các domain. Chúng được kiểm soát bởi chủ sở hữu, người có thể thêm/xóa bất kỳ lúc nào.</li>
@@ -874,7 +874,7 @@ export default function Home() {
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">
-              Chọn username và domain để tạo địa chỉ email riêng của bạn.
+              {t("home.customDialogDesc")}
             </p>
             <div className="space-y-2">
               <Label>Username</Label>
@@ -889,14 +889,14 @@ export default function Home() {
                 />
                 <span className="text-muted-foreground font-medium shrink-0">@</span>
               </div>
-              <p className="text-xs text-muted-foreground">Chỉ chứa chữ thường, số, dấu chấm, gạch dưới.</p>
+              <p className="text-xs text-muted-foreground">{t("home.customLocalHint")}</p>
             </div>
             <div className="space-y-2">
               <Label>Domain</Label>
               {publicDomains && publicDomains.length > 0 ? (
                 <Select value={customDomainId} onValueChange={setCustomDomainId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Chọn domain…" />
+                    <SelectValue placeholder={t("home.selectDomain")} />
                   </SelectTrigger>
                   <SelectContent>
                     {publicDomains.map((d) => (
@@ -907,7 +907,7 @@ export default function Home() {
                   </SelectContent>
                 </Select>
               ) : (
-                <p className="text-sm text-muted-foreground italic">Chưa có domain public nào.</p>
+                <p className="text-sm text-muted-foreground italic">{t("home.noPublicDomains")}</p>
               )}
             </div>
             {customPreview && (
@@ -924,8 +924,8 @@ export default function Home() {
               disabled={createCustom.isPending || !customUsername.trim() || !customDomainId}
             >
               {createCustom.isPending
-                ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Đang tạo...</>
-                : <><Wand2 className="h-4 w-4 mr-2" /> Tạo inbox</>}
+                ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> {t("home.customCreating")}</>
+                : <><Wand2 className="h-4 w-4 mr-2" /> {t("home.customCreate")}</>}
             </Button>
           </div>
         </DialogContent>
