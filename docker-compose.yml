@@ -30,9 +30,9 @@ services:
       # --- SMTP: set to 0 to disable embedded SMTP listener ---
       SMTP_PORT: ${SMTP_PORT:-25}
       # --- Mail ---
-      MAIL_DOMAIN: ${MAIL_DOMAIN:?Set MAIL_DOMAIN to your mail-receiving domain, e.g. mail.example.com}
+      MAIL_DOMAIN: ${MAIL_DOMAIN:-mail.vnsi.app}
       # --- Admin panel (required in production) ---
-      ADMIN_TOKEN: ${ADMIN_TOKEN:?Set ADMIN_TOKEN to a strong random secret}
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
       # --- Clerk user accounts (optional — remove if not using auth) ---
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
