@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tempmail}
       POSTGRES_DB: ${POSTGRES_DB:-tempmail}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata2:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tempmail}"]
       interval: 5s
@@ -23,7 +23,7 @@ services:
         condition: service_healthy
     environment:
       # --- Database ---
-      DATABASE_URL: ${DATABASE_URL:-postgres://tempmail:tempmail@postgres:5432/tempmail}
+      DATABASE_URL: ${DATABASE_URL}
       # --- Server ---
       PORT: "8080"
       NODE_ENV: production
@@ -71,4 +71,4 @@ networks:
     external: true
 
 volumes:
-  pgdata:
+  pgdata2:
