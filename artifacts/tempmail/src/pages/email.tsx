@@ -1,5 +1,5 @@
 import { PublicLayout } from "@/components/layout/public-layout";
-import { useGetEmail, getGetEmailQueryKey } from "@workspace/api-client-react";
+import { getGetEmailQueryKey } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import { ArrowLeft, Clock, Mail, Paperclip, RefreshCw, Trash2, Copy, ExternalLink, ChevronRight, KeyRound, Link2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { useDeleteEmail } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api-fetch";
 
 type QuickItem = { type: "otp"; value: string } | { type: "link"; value: string };
 
@@ -33,8 +35,14 @@ export default function EmailView() {
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<"html" | "text">("html");
 
-  const { data: email, isLoading } = useGetEmail(Number(id), {
-    query: { enabled: !!id, queryKey: getGetEmailQueryKey(Number(id)) },
+  const { data: email, isLoading } = useQuery({
+    queryKey: getGetEmailQueryKey(Number(id)),
+    queryFn: () => apiFetch<{
+      id: number; toAddress: string; fromAddress: string; subject: string;
+      preview?: string; textBody: string | null; htmlBody: string | null;
+      hasAttachments: boolean; receivedAt: string;
+    }>(`/api/inbox/emails/${id}`),
+    enabled: !!id,
   });
 
   const deleteEmail = useDeleteEmail();

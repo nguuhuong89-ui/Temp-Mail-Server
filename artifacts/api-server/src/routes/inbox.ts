@@ -218,6 +218,38 @@ async function isOwnedByOther(req: Request, address: string): Promise<boolean> {
   return false;
 }
 
+router.get("/inbox/emails/:id", async (req, res) => {
+  const id = Number(req.params["id"]);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const [row] = await db
+    .select()
+    .from(emailsTable)
+    .where(eq(emailsTable.id, id))
+    .limit(1);
+  if (!row) {
+    res.status(404).json({ error: "Email not found" });
+    return;
+  }
+  if (await isOwnedByOther(req, row.toAddress)) {
+    res.status(404).json({ error: "Email not found" });
+    return;
+  }
+  res.json({
+    id: row.id,
+    toAddress: row.toAddress,
+    fromAddress: row.fromAddress,
+    subject: row.subject,
+    preview: row.preview,
+    textBody: row.textBody,
+    htmlBody: row.htmlBody,
+    hasAttachments: row.hasAttachments,
+    receivedAt: row.receivedAt.toISOString(),
+  });
+});
+
 router.delete("/inbox/:address", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
   if (await isOwnedByOther(req, address)) {
