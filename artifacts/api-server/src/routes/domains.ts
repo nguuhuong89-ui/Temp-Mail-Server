@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, domainsTable, emailsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
-import { resolveMx } from "node:dns/promises";
+import { resolveMx, resolveTxt } from "node:dns/promises";
 import { invalidateDomainCache } from "../lib/domain-cache";
 import { isSafeWebhookUrl } from "../lib/webhooks";
 
@@ -143,19 +143,30 @@ router.post("/domains/:id/check", async (req, res) => {
   }
   let mxValid = false;
   let mxRecords: string[] = [];
+  let spfValid = false;
+  let spfRecords: string[] = [];
   try {
     const records = await resolveMx(domain.name);
     mxRecords = records
       .sort((a, b) => a.priority - b.priority)
-      .map((r) => `${r.priority} ${r.exchange}`);
+      .map((r: { priority: number; exchange: string }) => `${r.priority} ${r.exchange}`);
     mxValid = mxRecords.length > 0;
   } catch (err) {
     req.log.warn({ err, domain: domain.name }, "MX lookup failed");
+  }
+  try {
+    const txtRecords = await resolveTxt(domain.name);
+    spfRecords = txtRecords.map((parts: string[]) => parts.join("")).filter((r: string) => r.startsWith("v=spf1"));
+    spfValid = spfRecords.length > 0;
+  } catch (err) {
+    req.log.warn({ err, domain: domain.name }, "TXT/SPF lookup failed");
   }
   res.json({
     domain: domain.name,
     mxValid,
     mxRecords,
+    spfValid,
+    spfRecords,
     checkedAt: new Date().toISOString(),
   });
 });
