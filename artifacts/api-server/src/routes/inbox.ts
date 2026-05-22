@@ -118,13 +118,13 @@ router.post("/inbox/custom", async (req: Request, res: Response) => {
 
 router.get("/inbox/:address", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
+  const userId = (req as Request & { userId?: string }).userId ?? null;
   let [inbox] = await db
     .select()
     .from(inboxesTable)
     .where(eq(inboxesTable.address, address))
     .limit(1);
   if (inbox) {
-    const userId = (req as Request & { userId?: string }).userId ?? null;
     if (inbox.ownerApiKeyId !== null) {
       res.status(404).json({ error: "Inbox not found" });
       return;
@@ -132,6 +132,14 @@ router.get("/inbox/:address", async (req, res) => {
     if (inbox.ownerUserId !== null && inbox.ownerUserId !== userId) {
       res.status(404).json({ error: "Inbox not found" });
       return;
+    }
+    // Auto-claim: if inbox is anonymous and a signed-in user views it, claim it
+    if (inbox.ownerUserId === null && inbox.ownerApiKeyId === null && userId) {
+      await db
+        .update(inboxesTable)
+        .set({ ownerUserId: userId })
+        .where(eq(inboxesTable.address, address));
+      inbox = { ...inbox, ownerUserId: userId };
     }
   }
   if (!inbox) {
@@ -151,6 +159,7 @@ router.get("/inbox/:address", async (req, res) => {
         address,
         token: generateToken(),
         expiresAt: defaultExpiry(),
+        ownerUserId: userId,
       })
       .onConflictDoNothing()
       .returning();
