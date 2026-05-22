@@ -23,7 +23,7 @@ services:
         condition: service_healthy
     environment:
       # --- Database ---
-      DATABASE_URL: postgres://${POSTGRES_USER:-tempmail}:${POSTGRES_PASSWORD:-tempmail}@postgres:5432/${POSTGRES_DB:-tempmail}
+      DATABASE_URL: ${DATABASE_URL:-postgres://tempmail:tempmail@postgres:5432/tempmail}
       # --- Server ---
       PORT: "8080"
       NODE_ENV: production
