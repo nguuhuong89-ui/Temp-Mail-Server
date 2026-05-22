@@ -1,5 +1,6 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Globe, Server, Mail, CheckCircle2, Terminal } from "lucide-react";
+import { useEffect, useState } from "react";
 
 function DnsBlock({ title, icon: Icon, color, rows }: {
   title: string;
@@ -25,7 +26,22 @@ function DnsBlock({ title, icon: Icon, color, rows }: {
   );
 }
 
+function useServerInfo() {
+  const [info, setInfo] = useState<{ serverIp: string; smtpPort: number; mailDomain: string } | null>(null);
+  useEffect(() => {
+    fetch("/api/admin/server-info")
+      .then((r) => r.json())
+      .then((d) => setInfo(d))
+      .catch(() => {});
+  }, []);
+  return info;
+}
+
 export default function SetupGuide() {
+  const info = useServerInfo();
+  const serverIp = info?.serverIp ?? "Loading...";
+  const mailDomain = info?.mailDomain ?? "mail.yourdomain.com";
+
   return (
     <AdminLayout>
       <div className="space-y-8 max-w-3xl">
@@ -75,7 +91,7 @@ export default function SetupGuide() {
                 rows={[
                   { label: "Type", value: "A" },
                   { label: "Name/Host", value: "mail" },
-                  { label: "Value", value: "<IP Server của bạn>" },
+                  { label: "Value", value: serverIp },
                   { label: "TTL", value: "300 (hoặc Auto)" },
                 ]}
               />
@@ -87,7 +103,7 @@ export default function SetupGuide() {
                 rows={[
                   { label: "Type", value: "MX" },
                   { label: "Name/Host", value: "@ (hoặc để trống)" },
-                  { label: "Value", value: "mail.yourdomain.com" },
+                  { label: "Value", value: mailDomain },
                   { label: "Priority", value: "10" },
                 ]}
               />
@@ -120,7 +136,7 @@ export default function SetupGuide() {
               <div className="mt-3 p-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs text-muted-foreground">
                 # Kiểm tra thủ công qua terminal:<br />
                 $ dig MX yourdomain.com +short<br />
-                10 mail.yourdomain.com.
+                10 {mailDomain}.
               </div>
             </div>
           </div>
