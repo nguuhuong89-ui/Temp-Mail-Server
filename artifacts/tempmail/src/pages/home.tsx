@@ -1,4 +1,5 @@
 import { PublicLayout } from "@/components/layout/public-layout";
+import { useTranslation } from "react-i18next";
 import { Show } from "@clerk/react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useInboxStream } from "@/hooks/use-inbox-stream";
@@ -49,6 +50,7 @@ function extractQuickData(text: string): QuickItem[] {
 const AD_DURATION = 5;
 
 function AdWallModal({ open, onComplete, onClose }: { open: boolean; onComplete: () => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const [countdown, setCountdown] = useState(AD_DURATION);
   const [done, setDone] = useState(false);
   const timerRef = useRef<number | null>(null);
@@ -76,7 +78,7 @@ function AdWallModal({ open, onComplete, onClose }: { open: boolean; onComplete:
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Play className="h-4 w-4 text-amber-500" />
-            Xem quảng cáo để tiếp tục
+            {t("home.adTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -84,10 +86,10 @@ function AdWallModal({ open, onComplete, onClose }: { open: boolean; onComplete:
         <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
           <div className="px-4 py-6 text-center space-y-2">
             <div className="text-2xl font-black text-amber-600 dark:text-amber-400 tracking-tight">🔥 FLASH SALE</div>
-            <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Giảm đến <span className="text-orange-600 font-black text-lg">70%</span> tất cả sản phẩm</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Ưu đãi có hạn — Chỉ hôm nay!</div>
+            <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("home.adFlashSale")}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">{t("home.adLimitedOffer")}</div>
             <div className="mt-3 inline-block px-4 py-1.5 rounded-full bg-amber-500 text-white text-xs font-bold shadow-md shadow-amber-400/40">
-              MUA NGAY →
+              {t("home.adBuyNow")}
             </div>
           </div>
           {/* Countdown badge */}
@@ -99,7 +101,7 @@ function AdWallModal({ open, onComplete, onClose }: { open: boolean; onComplete:
         </div>
 
         <p className="text-xs text-center text-slate-400 dark:text-slate-500">
-          Quảng cáo giúp duy trì dịch vụ miễn phí cho bạn.
+          {t("home.adSupportMsg")}
         </p>
 
         <Button
@@ -107,7 +109,7 @@ function AdWallModal({ open, onComplete, onClose }: { open: boolean; onComplete:
           disabled={!done}
           onClick={() => { onComplete(); onClose(); }}
         >
-          {done ? "✓ Hoàn tất — Nhận thưởng" : `Bỏ qua sau ${countdown}s…`}
+          {done ? t("home.adDone") : t("home.adSkipAfter", { s: countdown })}
         </Button>
       </DialogContent>
     </Dialog>
@@ -115,6 +117,7 @@ function AdWallModal({ open, onComplete, onClose }: { open: boolean; onComplete:
 }
 
 function AddDomainDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
   const { data: me } = useQuery({
     queryKey: ["/account/me"],
     queryFn: () => apiFetch<{ plan: string }>("/api/account/me"),
@@ -133,16 +136,16 @@ function AddDomainDialog({ open, onClose }: { open: boolean; onClose: () => void
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Thêm custom domain</DialogTitle>
+          <DialogTitle>{t("home.addDomainTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 pt-1 text-sm text-muted-foreground">
           {me && me.plan !== "pro" ? (
             <>
-              <p>Thêm domain riêng là tính năng <strong>Pro</strong>.</p>
-              <Button asChild className="w-full"><Link href="/account/plan">Nâng cấp Pro</Link></Button>
+              <p>{t("home.addDomainProFeature")}</p>
+              <Button asChild className="w-full"><Link href="/account/plan">{t("home.upgradePro")}</Link></Button>
             </>
           ) : (
-            <p>Đang chuyển hướng…</p>
+            <p>{t("home.redirecting")}</p>
           )}
         </div>
       </DialogContent>
@@ -151,6 +154,7 @@ function AddDomainDialog({ open, onClose }: { open: boolean; onClose: () => void
 }
 
 export default function Home() {
+  const { t } = useTranslation();
   const params = useParams();
   const [, setLocation] = useLocation();
   const [localAddress, setLocalAddress] = useLocalStorage<string | null>("tempmail_address", null);
@@ -254,8 +258,8 @@ export default function Home() {
       );
       return;
     }
-    const t = setTimeout(() => setAutoRotateCountdown((c) => (c !== null ? c - 1 : null)), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setAutoRotateCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(timer);
   }, [autoRotateCountdown]);
 
   // Keep email input in sync when address changes (generate/custom/navigate)
@@ -303,7 +307,7 @@ export default function Home() {
   const handleCreateCustom = () => {
     const username = customUsername.trim().toLowerCase();
     if (!username || !customDomainId) {
-      toast({ title: "Vui lòng nhập username và chọn domain", variant: "destructive" });
+      toast({ title: t("home.customLocalPart"), variant: "destructive" });
       return;
     }
     createCustom.mutate(
@@ -315,7 +319,7 @@ export default function Home() {
           setCustomDialogOpen(false);
           setCustomUsername("");
           autoSave(data.address);
-          toast({ title: "Đã tạo inbox tùy chỉnh", description: data.address });
+          toast({ title: t("home.customInboxTitle"), description: data.address });
         },
         onError: (e: Error) => {
           toast({ title: "Tạo inbox thất bại", description: e.message, variant: "destructive" });
@@ -333,13 +337,13 @@ export default function Home() {
   const handleCopyAddress = () => {
     if (!address) return;
     navigator.clipboard.writeText(address);
-    toast({ title: "Đã copy địa chỉ email" });
+    toast({ title: t("home.copiedToast") });
   };
 
   const handleCopyUrl = () => {
     const url = `${window.location.origin}${import.meta.env.BASE_URL}inbox/${address}`;
     navigator.clipboard.writeText(url);
-    toast({ title: "Đã copy URL" });
+    toast({ title: t("home.copiedToast") });
   };
 
   const handleDeleteAll = () => {
@@ -349,7 +353,7 @@ export default function Home() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetInboxQueryKey(address) });
-          toast({ title: "Đã xoá tất cả email" });
+          toast({ title: t("home.allDeleted") });
           setPage(1);
         },
       },
@@ -414,7 +418,7 @@ export default function Home() {
       setTotpActiveSecret(trimmed);
     } catch {
       if (id !== totpReqRef.current) return;
-      toast({ title: "Secret 2FA không hợp lệ", variant: "destructive" });
+      toast({ title: t("home.invalidSecret"), variant: "destructive" });
     } finally {
       if (id === totpReqRef.current) setTotpLoading(false);
     }
@@ -436,7 +440,7 @@ export default function Home() {
   const handleCopyTotp = () => {
     if (!totpCode) return;
     navigator.clipboard.writeText(totpCode);
-    toast({ title: "Đã copy mã 2FA", description: totpCode });
+    toast({ title: t("home.twoFaCopied"), description: totpCode });
   };
 
   // Pagination
@@ -460,21 +464,21 @@ export default function Home() {
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 shadow-md">
             <Timer className="h-5 w-5 text-amber-500 shrink-0 animate-pulse" />
             <div className="flex-1 min-w-0">
-              <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">Inbox đã quá 10 phút </span>
-              <span className="text-sm text-amber-700 dark:text-amber-300">— tự động tạo email mới sau <strong className="font-mono text-base">{autoRotateCountdown}s</strong></span>
+              <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">{t("home.autoRotateBanner")} </span>
+              <span className="text-sm text-amber-700 dark:text-amber-300">{t("home.autoRotateSuffix")} <strong className="font-mono text-base">{autoRotateCountdown}s</strong></span>
             </div>
             <div className="flex gap-2 shrink-0">
               <button
                 onClick={() => { setAutoRotateCountdown(null); lastAddressChangedAt.current = Date.now(); }}
                 className="text-xs px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 font-medium transition-colors"
               >
-                Giữ lại
+                {t("home.keepIt")}
               </button>
               <button
                 onClick={() => { setAutoRotateCountdown(0); }}
                 className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white font-medium transition-colors flex items-center gap-1"
               >
-                <Zap className="h-3 w-3" /> Tạo ngay
+                <Zap className="h-3 w-3" /> {t("home.createNow")}
               </button>
             </div>
           </div>
@@ -495,7 +499,7 @@ export default function Home() {
                   value={emailInputValue}
                   onChange={(e) => setEmailInputValue(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") handleCheckEmail(); }}
-                  placeholder="nhập email bất kỳ, vd: alice@tempmail.local"
+                  placeholder={t("home.emailPlaceholder")}
                   className="flex-1 px-3 py-2 border border-indigo-200 dark:border-indigo-900/60 rounded-lg text-sm font-mono bg-indigo-50/50 dark:bg-indigo-950/30 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
                   spellCheck={false}
                   autoCapitalize="none"
@@ -503,7 +507,7 @@ export default function Home() {
                 />
                 {address && (
                   <span className={`px-2.5 py-1 text-xs font-bold rounded-full tracking-wide shrink-0 ${isOnline ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-500/20 text-slate-400 border border-slate-500/30"}`}>
-                    {isOnline ? "● Online" : "○ Offline"}
+                    {isOnline ? t("home.online") : t("home.offline")}
                   </span>
                 )}
               </div>
@@ -511,7 +515,7 @@ export default function Home() {
 
             {address && (
               <div className="flex items-center gap-2 text-sm flex-wrap">
-                <span className="font-semibold text-violet-600 dark:text-violet-400 shrink-0">URL Email:</span>
+                <span className="font-semibold text-violet-600 dark:text-violet-400 shrink-0">{t("home.urlLabel")}</span>
                 <a
                   href={shareUrl}
                   className="text-indigo-600 dark:text-indigo-400 hover:underline break-all font-mono text-xs"
@@ -534,7 +538,7 @@ export default function Home() {
                 onClick={handleCopyAddress}
                 disabled={!address}
               >
-                <Copy className="h-3.5 w-3.5 mr-1" /> Copy Email
+                <Copy className="h-3.5 w-3.5 mr-1" /> {t("home.copyEmail")}
               </Button>
               <Button
                 size="sm"
@@ -542,7 +546,7 @@ export default function Home() {
                 onClick={handleCheckEmail}
                 disabled={!emailInputValue.trim() || isLoading}
               >
-                <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isLoading ? "animate-spin" : ""}`} /> Check Inbox
+                <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isLoading ? "animate-spin" : ""}`} /> {t("home.checkInbox")}
               </Button>
               <Button
                 size="sm"
@@ -553,7 +557,7 @@ export default function Home() {
                 {createRandom.isPending
                   ? <RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" />
                   : <Mail className="h-3.5 w-3.5 mr-1" />}
-                Generate New Email
+                {t("home.generateNew")}
               </Button>
               <Button
                 size="sm"
@@ -565,7 +569,7 @@ export default function Home() {
                   setCustomDialogOpen(true);
                 }}
               >
-                <Wand2 className="h-3.5 w-3.5 mr-1" /> Tạo Inbox Tùy Chỉnh
+                <Wand2 className="h-3.5 w-3.5 mr-1" /> {t("home.createCustom")}
               </Button>
               <Button
                 size="sm"
@@ -573,7 +577,7 @@ export default function Home() {
                 onClick={handleDeleteAll}
                 disabled={!address || clearEmails.isPending || totalEmails === 0}
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete All Mail
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("home.deleteAll")}
               </Button>
               {address && (
                 <Button
@@ -584,13 +588,13 @@ export default function Home() {
                   title={isSaved ? "Bỏ lưu email này" : "Lưu email để dùng lại"}
                 >
                   {isSaved
-                    ? <><BookmarkCheck className="h-3.5 w-3.5 mr-1" /> Đã lưu</>
-                    : <><Bookmark className="h-3.5 w-3.5 mr-1" /> Lưu Email</>}
+                    ? <><BookmarkCheck className="h-3.5 w-3.5 mr-1" /> {t("home.saved")}</>
+                    : <><Bookmark className="h-3.5 w-3.5 mr-1" /> {t("home.saveEmail")}</>}
                 </Button>
               )}
               {address && (
                 <Button size="sm" variant="outline" onClick={handleExtend} disabled={extend.isPending} className="border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">
-                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${extend.isPending ? "animate-spin" : ""}`} /> +10 phút
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${extend.isPending ? "animate-spin" : ""}`} /> {t("home.extendTime")}
                 </Button>
               )}
             </div>
@@ -602,7 +606,7 @@ export default function Home() {
                 <Input
                   value={totpSecret}
                   onChange={(e) => setTotpSecret(e.target.value)}
-                  placeholder="2FA key (base32 hoặc otpauth://...)"
+                  placeholder={t("home.totpPlaceholder")}
                   className="flex-1 min-w-0 h-8 text-sm font-mono border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 focus-visible:ring-violet-500"
                   onKeyDown={(e) => { if (e.key === "Enter") void fetchTotp(totpSecret); }}
                 />
@@ -622,7 +626,7 @@ export default function Home() {
                     onClick={() => void fetchTotp(totpSecret)}
                     disabled={totpLoading || !totpSecret.trim()}
                   >
-                    {totpLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Copy 2FA code"}
+                    {totpLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : t("home.copy2fa")}
                   </Button>
                 )}
                 <Show when="signed-in">
@@ -636,7 +640,7 @@ export default function Home() {
                 <Show when="signed-out">
                   <Link href="/sign-in">
                     <button className="flex items-center gap-1 px-3 h-8 text-sm bg-slate-800 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors">
-                      <ExternalLink className="h-3.5 w-3.5" /> Add Domain
+                      <ExternalLink className="h-3.5 w-3.5" /> {t("home.addDomain")}
                     </button>
                   </Link>
                 </Show>
@@ -647,7 +651,7 @@ export default function Home() {
           {/* Pagination bar */}
           <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-700/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-indigo-50/40 dark:bg-indigo-950/20 text-sm">
             <div className="flex items-center gap-2">
-              <span className="text-slate-600 dark:text-slate-400">Show:</span>
+              <span className="text-slate-600 dark:text-slate-400">{t("home.showLabel")}</span>
               <select
                 value={pageSize}
                 onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
@@ -655,11 +659,11 @@ export default function Home() {
               >
                 {PAGE_SIZE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
-              <span className="text-slate-600 dark:text-slate-400">emails per page</span>
+              <span className="text-slate-600 dark:text-slate-400">{t("home.perPage")}</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-slate-500 dark:text-slate-400 text-xs">
-                {totalEmails === 0 ? "No emails" : `Showing ${showingFrom}–${showingTo} of ${totalEmails} emails`}
+                {totalEmails === 0 ? t("home.noEmails") : t("home.showingCount", { from: showingFrom, to: showingTo, total: totalEmails })}
               </span>
               <div className="flex items-center gap-1">
                 <button
@@ -686,10 +690,10 @@ export default function Home() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gradient-to-r from-indigo-700 to-violet-700 text-white">
-                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider w-1/4">Sender</th>
-                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider">Subject</th>
-                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider w-36 hidden sm:table-cell">Date</th>
-                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider w-24">Actions</th>
+                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider w-1/4">{t("home.colSender")}</th>
+                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider">{t("home.colSubject")}</th>
+                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider w-36 hidden sm:table-cell">{t("home.colDate")}</th>
+                  <th className="text-left px-4 py-2.5 font-semibold uppercase text-xs tracking-wider w-24">{t("home.colActions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -704,14 +708,14 @@ export default function Home() {
                     <td colSpan={4} className="text-center py-10 text-slate-400">
                       <div className="flex flex-col items-center gap-2">
                         <Mail className="h-8 w-8 text-indigo-300 dark:text-indigo-600" />
-                        <span>Bấm <span className="text-violet-600 dark:text-violet-400 font-medium">"Generate New Email"</span> để tạo inbox.</span>
+                        <span>{t("home.noAddressHint")}</span>
                       </div>
                     </td>
                   </tr>
                 ) : pagedEmails.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="text-center py-8 text-slate-400">
-                      No emails found
+                      {t("home.noEmailsFound")}
                     </td>
                   </tr>
                 ) : (
@@ -726,13 +730,13 @@ export default function Home() {
                       </td>
                       <td className="px-4 py-2.5 text-slate-700 dark:text-slate-300">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="truncate">{email.subject || "(No Subject)"}</span>
+                          <span className="truncate">{email.subject || t("home.noSubject")}</span>
                           {email.hasAttachments && <Paperclip className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
                           {extractQuickData(`${email.subject} ${email.preview}`).map((item) =>
                             item.type === "otp" ? (
                               <button
                                 key="otp"
-                                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.value); toast({ title: "OTP đã copy!", description: item.value }); }}
+                                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.value); toast({ title: t("home.otpCopied"), description: item.value }); }}
                                 className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-xs font-mono font-bold hover:bg-amber-200 dark:hover:bg-amber-800/70 border border-amber-300 dark:border-amber-700 transition-colors"
                                 title="Click để copy OTP"
                               >
@@ -761,7 +765,7 @@ export default function Home() {
                         <button
                           onClick={(e) => handleDeleteEmail(e, email.id)}
                           className="p-1.5 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                          aria-label="Xoá email"
+                          aria-label={t("home.delete")}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -780,14 +784,14 @@ export default function Home() {
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-800/40">
               <div className="flex items-center gap-2">
                 <History className="h-4 w-4 text-violet-500" />
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Email đã lưu</span>
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("home.savedEmails")}</span>
                 <span className="px-1.5 py-0.5 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 text-xs font-bold">{savedEmails.length}</span>
               </div>
               <button
-                onClick={() => { setSavedEmails([]); toast({ title: "Đã xóa tất cả email đã lưu" }); }}
+                onClick={() => { setSavedEmails([]); toast({ title: t("home.allDeleted") }); }}
                 className="text-xs text-slate-400 hover:text-rose-500 transition-colors"
               >
-                Xóa tất cả
+                {t("home.clearSaved")}
               </button>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-48 overflow-y-auto">
@@ -819,10 +823,10 @@ export default function Home() {
                   <button
                     onClick={() => {
                       setSavedEmails(savedEmails.filter((e) => e !== email));
-                      toast({ title: "Đã bỏ lưu", description: email });
+                      toast({ title: t("home.unsavedToast"), description: email });
                     }}
                     className="p-1 rounded-md text-slate-300 dark:text-slate-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                    title="Bỏ lưu"
+                    title={t("home.unsavedToast")}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -865,7 +869,7 @@ export default function Home() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AtSign className="h-5 w-5 text-violet-500" />
-              Tạo Inbox Tùy Chỉnh
+              {t("home.customInboxTitle")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">

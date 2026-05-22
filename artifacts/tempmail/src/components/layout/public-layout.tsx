@@ -1,12 +1,15 @@
 import { Link } from "wouter";
-import { Mail, BookOpen, Globe, ShieldCheck, AlertTriangle, User as UserIcon, LogIn, MessageCircle } from "lucide-react";
+import { Mail, BookOpen, ShieldCheck, AlertTriangle, User as UserIcon, LogIn, MessageCircle } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { Show, UserButton } from "@clerk/react";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useTranslation } from "react-i18next";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-indigo-950 via-slate-900 to-violet-950 text-foreground selection:bg-violet-500/30">
       {/* Header */}
@@ -28,9 +31,9 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-0.5 text-sm">
             {[
-              { href: "/admin/api-docs", icon: BookOpen, label: "API Docs" },
-              { href: "/acceptable-use", icon: ShieldCheck, label: "Acceptable Use" },
-              { href: "/abuse", icon: AlertTriangle, label: "Abuse" },
+              { href: "/admin/api-docs", icon: BookOpen, label: t("nav.apiDocs") },
+              { href: "/acceptable-use", icon: ShieldCheck, label: t("nav.acceptableUse") },
+              { href: "/abuse", icon: AlertTriangle, label: t("nav.abuse") },
             ].map(({ href, icon: Icon, label }) => (
               <Link key={href} href={href}>
                 <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
@@ -42,31 +45,32 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <Show when="signed-in">
               <Link href="/account/domains">
                 <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
-                  <Globe className="h-3.5 w-3.5" /> Add Custom Domain
+                  {t("nav.addCustomDomain")}
                 </Button>
               </Link>
             </Show>
             <Show when="signed-out">
               <Link href="/sign-in">
                 <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
-                  <Globe className="h-3.5 w-3.5" /> Add Custom Domain
+                  {t("nav.addCustomDomain")}
                 </Button>
               </Link>
             </Show>
             <a href="mailto:contact@tempmail.local">
               <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
-                <MessageCircle className="h-3.5 w-3.5" /> Contact
+                <MessageCircle className="h-3.5 w-3.5" /> {t("nav.contact")}
               </Button>
             </a>
           </nav>
 
-          {/* Right: auth */}
+          {/* Right: language + auth */}
           <div className="flex items-center gap-1 shrink-0">
+            <LanguageSwitcher />
             <Show when="signed-in">
               <Link href="/account">
                 <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs text-white/80 hover:text-white hover:bg-white/10">
                   <UserIcon className="h-3.5 w-3.5 sm:mr-1" />
-                  <span className="hidden sm:inline">Tài khoản</span>
+                  <span className="hidden sm:inline">{t("nav.account")}</span>
                 </Button>
               </Link>
               <UserButton userProfileMode="navigation" userProfileUrl={`${basePath}/account`} />
@@ -75,12 +79,12 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <Link href="/sign-in">
                 <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs text-white/80 hover:text-white hover:bg-white/10">
                   <LogIn className="h-3.5 w-3.5 sm:mr-1" />
-                  <span className="hidden sm:inline">Đăng nhập</span>
+                  <span className="hidden sm:inline">{t("nav.signIn")}</span>
                 </Button>
               </Link>
               <Link href="/sign-up">
                 <Button size="sm" className="h-8 px-3 text-xs bg-violet-600 hover:bg-violet-500 border-0 text-white shadow-lg shadow-violet-500/30">
-                  Đăng ký
+                  {t("nav.signUp")}
                 </Button>
               </Link>
             </Show>
@@ -92,22 +96,22 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         <div className="md:hidden border-t border-white/10 flex overflow-x-auto gap-1 px-2 py-1.5">
           <Link href="/admin/api-docs">
             <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap text-white/70 hover:text-white hover:bg-white/10">
-              <BookOpen className="h-3 w-3" /> API Docs
+              <BookOpen className="h-3 w-3" /> {t("nav.apiDocs")}
             </Button>
           </Link>
           <Link href="/account/domains">
             <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap text-white/70 hover:text-white hover:bg-white/10">
-              <Globe className="h-3 w-3" /> Add Domain
+              {t("nav.addCustomDomain")}
             </Button>
           </Link>
           <Link href="/acceptable-use">
             <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap text-white/70 hover:text-white hover:bg-white/10">
-              <ShieldCheck className="h-3 w-3" /> Acceptable Use
+              <ShieldCheck className="h-3 w-3" /> {t("nav.acceptableUse")}
             </Button>
           </Link>
           <Link href="/abuse">
             <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap text-white/70 hover:text-white hover:bg-white/10">
-              <AlertTriangle className="h-3 w-3" /> Abuse
+              <AlertTriangle className="h-3 w-3" /> {t("nav.abuse")}
             </Button>
           </Link>
         </div>
@@ -117,11 +121,11 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <footer className="border-t border-white/10 py-4 bg-black/20 backdrop-blur-sm">
         <div className="container max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 px-4 text-xs text-white/50">
-          <p>© {new Date().getFullYear()} TempMail — receive-only temporary email service.</p>
+          <p>© {new Date().getFullYear()} TempMail — {t("footer.tagline")}</p>
           <nav className="flex items-center gap-4">
-            <Link href="/acceptable-use" className="hover:text-white/80 transition-colors">Chính sách sử dụng</Link>
-            <Link href="/abuse" className="hover:text-white/80 transition-colors">Báo cáo lạm dụng</Link>
-            <a href="mailto:contact@tempmail.local" className="hover:text-white/80 transition-colors">Contact</a>
+            <Link href="/acceptable-use" className="hover:text-white/80 transition-colors">{t("nav.policyLink")}</Link>
+            <Link href="/abuse" className="hover:text-white/80 transition-colors">{t("nav.abuseLink")}</Link>
+            <a href="mailto:contact@tempmail.local" className="hover:text-white/80 transition-colors">{t("nav.contact")}</a>
           </nav>
         </div>
       </footer>
