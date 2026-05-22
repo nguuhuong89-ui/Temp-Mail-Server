@@ -1,8 +1,12 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startSmtpServer } from "./lib/smtp";
 import { startCleanupJob } from "./lib/cleanup";
 import { assertProductionAdminConfig } from "./middlewares/admin-auth";
+import { db } from "@workspace/db";
 
 assertProductionAdminConfig();
 
@@ -19,6 +23,13 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const migrationsFolder = path.resolve(__dirname, "../../../migrations");
+
+logger.info({ migrationsFolder }, "Running database migrations");
+await migrate(db, { migrationsFolder });
+logger.info("Database migrations complete");
 
 app.listen(port, (err) => {
   if (err) {
