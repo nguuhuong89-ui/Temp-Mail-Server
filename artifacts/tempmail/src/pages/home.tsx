@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Mail, Copy, Trash2, ChevronLeft, ChevronRight, Paperclip, ExternalLink, Search, Wand2, AtSign, Bookmark, BookmarkCheck, Play } from "lucide-react";
+import { RefreshCw, Mail, Copy, Trash2, ChevronLeft, ChevronRight, Paperclip, ExternalLink, Search, Wand2, AtSign, Bookmark, BookmarkCheck, Play, Pin, X, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdRenderer } from "@/components/ad-renderer";
 import { Link, useParams, useLocation } from "wouter";
@@ -209,6 +209,10 @@ export default function Home() {
     }
   }, [publicDomains, customDomainId]);
 
+  const autoSave = useCallback((addr: string) => {
+    setSavedEmails((prev) => [addr, ...prev.filter((e) => e !== addr)].slice(0, 20));
+  }, [setSavedEmails]);
+
   const handleGenerate = () => {
     const domainId = selectedDomainId ? parseInt(selectedDomainId, 10) : undefined;
     createRandom.mutate(
@@ -217,6 +221,7 @@ export default function Home() {
         onSuccess: (data) => {
           setLocalAddress(data.address);
           window.history.pushState({}, "", `/inbox/${data.address}`);
+          autoSave(data.address);
         },
       },
     );
@@ -251,6 +256,7 @@ export default function Home() {
           window.history.pushState({}, "", `/inbox/${data.address}`);
           setCustomDialogOpen(false);
           setCustomUsername("");
+          autoSave(data.address);
           toast({ title: "Đã tạo inbox tùy chỉnh", description: data.address });
         },
         onError: (e: Error) => {
@@ -660,6 +666,64 @@ export default function Home() {
             </table>
           </div>
         </div>
+
+        {/* Saved Emails Panel */}
+        {savedEmails.length > 0 && (
+          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur rounded-xl border border-white/20 shadow-lg shadow-black/20 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-800/40">
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-violet-500" />
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Email đã lưu</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 text-xs font-bold">{savedEmails.length}</span>
+              </div>
+              <button
+                onClick={() => { setSavedEmails([]); toast({ title: "Đã xóa tất cả email đã lưu" }); }}
+                className="text-xs text-slate-400 hover:text-rose-500 transition-colors"
+              >
+                Xóa tất cả
+              </button>
+            </div>
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-48 overflow-y-auto">
+              {savedEmails.map((email) => (
+                <div
+                  key={email}
+                  className={`flex items-center gap-2 px-4 py-2 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 transition-colors group ${
+                    email === address ? "bg-violet-50 dark:bg-violet-950/30" : ""
+                  }`}
+                >
+                  <button
+                    className="flex-1 flex items-center gap-2 min-w-0 text-left"
+                    onClick={() => { setLocalAddress(email); setLocation(`/inbox/${email}`); }}
+                  >
+                    <Pin className={`h-3 w-3 shrink-0 ${
+                      email === address
+                        ? "text-violet-500"
+                        : "text-slate-300 dark:text-slate-600 group-hover:text-indigo-400"
+                    }`} />
+                    <span className={`font-mono text-sm truncate ${
+                      email === address
+                        ? "text-violet-700 dark:text-violet-300 font-semibold"
+                        : "text-slate-600 dark:text-slate-400"
+                    }`}>{email}</span>
+                    {email === address && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-600 dark:text-violet-400 text-xs font-bold shrink-0">active</span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSavedEmails(savedEmails.filter((e) => e !== email));
+                      toast({ title: "Đã bỏ lưu", description: email });
+                    }}
+                    className="p-1 rounded-md text-slate-300 dark:text-slate-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                    title="Bỏ lưu"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Important Notice */}
         <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-xl border border-white/20 shadow-lg shadow-black/20 p-4 sm:p-5">
