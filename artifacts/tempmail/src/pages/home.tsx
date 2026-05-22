@@ -234,8 +234,7 @@ export default function Home() {
       return;
     }
     if (trimmed === address) {
-      // Same address — just refresh
-      queryClient.invalidateQueries({ queryKey: getGetInboxQueryKey(trimmed) });
+      void queryClient.refetchQueries({ queryKey: getGetInboxQueryKey(trimmed) });
       return;
     }
     setLocalAddress(trimmed);
