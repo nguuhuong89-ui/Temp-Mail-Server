@@ -1,29 +1,12 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: tempmail
-      POSTGRES_PASSWORD: tempmail
-      POSTGRES_DB: tempmail
-    volumes:
-      - pgdata2:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tempmail"]
-      interval: 5s
-      retries: 10
-
   api:
     build:
       context: .
       target: api
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       # --- Database ---
-      DATABASE_URL: postgres://tempmail:tempmail@postgres:5432/tempmail
+      DATABASE_URL: postgres://tempmail:tempmail@gq2c1jwnjps3r5g4ysxtw331:5432/tempmail
       # --- Server ---
       PORT: "8080"
       NODE_ENV: production
@@ -69,6 +52,3 @@ services:
 networks:
   coolify:
     external: true
-
-volumes:
-  pgdata2:
