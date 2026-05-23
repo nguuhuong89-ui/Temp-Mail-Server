@@ -57,6 +57,22 @@ export default defineConfig(async ({ command }) => ({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("@clerk")) return "clerk";
+          if (id.includes("framer-motion")) return "motion";
+          if (id.includes("recharts") || id.includes("/d3-") || id.includes("d3-")) return "charts";
+          if (id.includes("react-dom") || id.includes("/react/jsx") || id.includes("react-hook-form") || id.includes("@hookform") || id.includes("wouter")) return "react-core";
+          if (id.includes("@radix-ui") || id.includes("cmdk") || id.includes("vaul") || id.includes("input-otp") || id.includes("embla-carousel")) return "ui";
+          if (id.includes("@tanstack")) return "query";
+          if (id.includes("i18next") || id.includes("react-i18next")) return "i18n";
+          return "vendor";
+        },
+      },
+    },
   },
   server: {
     port,

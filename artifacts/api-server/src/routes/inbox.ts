@@ -119,11 +119,28 @@ router.post("/inbox/custom", async (req: Request, res: Response) => {
 router.get("/inbox/:address", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
   const userId = (req as Request & { userId?: string }).userId ?? null;
-  let [inbox] = await db
-    .select()
-    .from(inboxesTable)
-    .where(eq(inboxesTable.address, address))
-    .limit(1);
+
+  // Fetch inbox metadata and full email list in parallel — both are always needed
+  const [inboxRows, emails] = await Promise.all([
+    db.select().from(inboxesTable).where(eq(inboxesTable.address, address)).limit(1),
+    db
+      .select({
+        id: emailsTable.id,
+        toAddress: emailsTable.toAddress,
+        fromAddress: emailsTable.fromAddress,
+        subject: emailsTable.subject,
+        preview: emailsTable.preview,
+        hasAttachments: emailsTable.hasAttachments,
+        receivedAt: emailsTable.receivedAt,
+      })
+      .from(emailsTable)
+      .where(eq(emailsTable.toAddress, address))
+      .orderBy(desc(emailsTable.receivedAt))
+      .limit(100),
+  ]);
+
+  let inbox = inboxRows[0];
+
   if (inbox) {
     if (inbox.ownerApiKeyId !== null) {
       res.status(404).json({ error: "Inbox not found" });
@@ -141,15 +158,9 @@ router.get("/inbox/:address", async (req, res) => {
         .where(eq(inboxesTable.address, address));
       inbox = { ...inbox, ownerUserId: userId };
     }
-  }
-  if (!inbox) {
+  } else {
     // Allow viewing addresses that received mail but were never explicitly created
-    const anyMail = await db
-      .select({ id: emailsTable.id })
-      .from(emailsTable)
-      .where(eq(emailsTable.toAddress, address))
-      .limit(1);
-    if (anyMail.length === 0) {
+    if (emails.length === 0) {
       res.status(404).json({ error: "Inbox not found" });
       return;
     }
@@ -165,20 +176,6 @@ router.get("/inbox/:address", async (req, res) => {
       .returning();
     inbox = created!;
   }
-  const emails = await db
-    .select({
-      id: emailsTable.id,
-      toAddress: emailsTable.toAddress,
-      fromAddress: emailsTable.fromAddress,
-      subject: emailsTable.subject,
-      preview: emailsTable.preview,
-      hasAttachments: emailsTable.hasAttachments,
-      receivedAt: emailsTable.receivedAt,
-    })
-    .from(emailsTable)
-    .where(eq(emailsTable.toAddress, address))
-    .orderBy(desc(emailsTable.receivedAt))
-    .limit(100);
   res.json({
     address: inbox.address,
     createdAt: inbox.createdAt.toISOString(),
@@ -256,8 +253,11 @@ router.delete("/inbox/:address", async (req, res) => {
     res.status(404).json({ error: "Inbox not found" });
     return;
   }
-  await db.delete(emailsTable).where(eq(emailsTable.toAddress, address));
-  await db.delete(inboxesTable).where(eq(inboxesTable.address, address));
+  // Run both deletes in parallel — no FK constraint between emails and inboxes
+  await Promise.all([
+    db.delete(emailsTable).where(eq(emailsTable.toAddress, address)),
+    db.delete(inboxesTable).where(eq(inboxesTable.address, address)),
+  ]);
   res.status(204).end();
 });
 

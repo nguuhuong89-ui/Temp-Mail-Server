@@ -54,60 +54,64 @@ export function startSmtpServer(port: number): SMTPServer {
             return;
           }
 
-          for (const rcpt of session.envelope.rcptTo) {
-            const toAddress = rcpt.address.toLowerCase();
-            const domainName = toAddress.split("@")[1] ?? "";
-            const domain = await lookupDomain(domainName);
-            if (!domain || domain.status !== "active") {
-              logger.warn({ toAddress }, "Rejected mail for inactive/unknown domain");
-              continue;
-            }
-            // Auto-create inbox row so address shows up in UI history
-            await db
-              .insert(inboxesTable)
-              .values({
-                address: toAddress,
-                token: generateToken(),
-                expiresAt: defaultExpiry(),
-              })
-              .onConflictDoNothing();
-
-            const [row] = await db
-              .insert(emailsTable)
-              .values({
-                toAddress,
-                fromAddress: fromAddress || "unknown@unknown",
-                subject,
-                textBody: text,
-                htmlBody: html,
-                preview,
-                hasAttachments,
-                domainId: domain.id,
-              })
-              .returning();
-            if (row) {
-              emitEmailReceived({
-                toAddress,
-                emailId: row.id,
-                fromAddress: row.fromAddress,
-                subject: row.subject,
-                receivedAt: row.receivedAt.toISOString(),
-              });
-              // Fire optional per-domain webhook (non-blocking).
-              if (domain.webhookUrl) {
-                fireEmailWebhook(domain.webhookUrl, {
-                  event: "email.received",
+          // Process all recipients in parallel for faster delivery
+          await Promise.all(
+            session.envelope.rcptTo.map(async (rcpt) => {
+              const toAddress = rcpt.address.toLowerCase();
+              const domainName = toAddress.split("@")[1] ?? "";
+              const domain = await lookupDomain(domainName);
+              if (!domain || domain.status !== "active") {
+                logger.warn({ toAddress }, "Rejected mail for inactive/unknown domain");
+                return;
+              }
+              // Auto-create inbox row and insert email in parallel
+              const [, [row]] = await Promise.all([
+                db
+                  .insert(inboxesTable)
+                  .values({
+                    address: toAddress,
+                    token: generateToken(),
+                    expiresAt: defaultExpiry(),
+                  })
+                  .onConflictDoNothing(),
+                db
+                  .insert(emailsTable)
+                  .values({
+                    toAddress,
+                    fromAddress: fromAddress || "unknown@unknown",
+                    subject,
+                    textBody: text,
+                    htmlBody: html,
+                    preview,
+                    hasAttachments,
+                    domainId: domain.id,
+                  })
+                  .returning(),
+              ]);
+              if (row) {
+                emitEmailReceived({
+                  toAddress,
                   emailId: row.id,
-                  toAddress: row.toAddress,
                   fromAddress: row.fromAddress,
                   subject: row.subject,
-                  preview: row.preview,
-                  hasAttachments: row.hasAttachments,
                   receivedAt: row.receivedAt.toISOString(),
                 });
+                // Fire optional per-domain webhook (non-blocking).
+                if (domain.webhookUrl) {
+                  fireEmailWebhook(domain.webhookUrl, {
+                    event: "email.received",
+                    emailId: row.id,
+                    toAddress: row.toAddress,
+                    fromAddress: row.fromAddress,
+                    subject: row.subject,
+                    preview: row.preview,
+                    hasAttachments: row.hasAttachments,
+                    receivedAt: row.receivedAt.toISOString(),
+                  });
+                }
               }
-            }
-          }
+            }),
+          );
           callback();
         })
         .catch((err) => {
