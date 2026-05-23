@@ -83,6 +83,7 @@ const zh: Translations = {
     adFlashSale: "全场商品最高优惠 70%",
     adLimitedOffer: "限时优惠 — 仅限今天！",
     adBuyNow: "立即购买 →",
+    invalidEmail: "无效的电子邮件地址",
     autoRotatedToast: "已自动生成新邮箱",
     customCreateError: "创建收件箱失败",
     customDialogDesc: "选择用户名和域名来创建您自己的电子邮件地址。",

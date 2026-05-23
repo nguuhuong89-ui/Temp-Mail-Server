@@ -162,7 +162,7 @@ export default function Home() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: inbox, isLoading } = useGetInbox(address || "", {
+  const { data: inbox, isLoading, isFetching } = useGetInbox(address || "", {
     query: { enabled: !!address, queryKey: getGetInboxQueryKey(address || "") },
   });
   const { data: publicDomains } = useListPublicDomains();
@@ -293,13 +293,14 @@ export default function Home() {
   const handleCheckEmail = () => {
     const trimmed = emailInputValue.trim().toLowerCase();
     if (!trimmed || !trimmed.includes("@")) {
-      toast({ title: "Địa chỉ email không hợp lệ", variant: "destructive" });
+      toast({ title: t("home.invalidEmail"), variant: "destructive" });
       return;
     }
     if (trimmed === address) {
       void queryClient.refetchQueries({ queryKey: getGetInboxQueryKey(trimmed) });
       return;
     }
+    queryClient.removeQueries({ queryKey: getGetInboxQueryKey(trimmed) });
     setLocalAddress(trimmed);
     setLocation(`/inbox/${trimmed}`);
   };
@@ -544,9 +545,9 @@ export default function Home() {
                 size="sm"
                 className="bg-sky-500 hover:bg-sky-400 text-white border-0 shadow-sm shadow-sky-500/30 font-semibold"
                 onClick={handleCheckEmail}
-                disabled={!emailInputValue.trim() || isLoading}
+                disabled={!emailInputValue.trim() || isFetching}
               >
-                <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isLoading ? "animate-spin" : ""}`} /> {t("home.checkInbox")}
+                <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isFetching ? "animate-spin" : ""}`} /> {t("home.checkInbox")}
               </Button>
               <Button
                 size="sm"

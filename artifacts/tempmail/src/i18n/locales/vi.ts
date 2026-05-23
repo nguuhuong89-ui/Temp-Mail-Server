@@ -83,6 +83,7 @@ const vi: Translations = {
     adFlashSale: "Giảm đến 70% tất cả sản phẩm",
     adLimitedOffer: "Ưu đãi có hạn — Chỉ hôm nay!",
     adBuyNow: "MUA NGAY →",
+    invalidEmail: "Địa chỉ email không hợp lệ",
     autoRotatedToast: "Email mới đã được tạo tự động",
     customCreateError: "Tạo inbox thất bại",
     customDialogDesc: "Chọn username và domain để tạo địa chỉ email riêng của bạn.",

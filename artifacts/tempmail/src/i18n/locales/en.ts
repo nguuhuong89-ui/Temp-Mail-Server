@@ -81,6 +81,7 @@ const en = {
     adFlashSale: "Up to 70% off all products",
     adLimitedOffer: "Limited time — Today only!",
     adBuyNow: "BUY NOW →",
+    invalidEmail: "Invalid email address",
     autoRotatedToast: "New email auto-generated",
     customCreateError: "Failed to create inbox",
     customDialogDesc: "Choose a username and domain to create your own email address.",
