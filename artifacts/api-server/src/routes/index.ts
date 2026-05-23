@@ -14,7 +14,7 @@ import adminInboxesRouter from "./admin-inboxes";
 import adminSettingsRouter from "./admin-settings";
 import publicRouter from "./public";
 import { adminAuth } from "../middlewares/admin-auth";
-import { attachUser, requireAdmin } from "../middlewares/clerk-auth";
+import { attachUser } from "../middlewares/clerk-auth";
 
 const router: IRouter = Router();
 
@@ -30,11 +30,9 @@ router.use(v1Router);
 // Authenticated user (Clerk) endpoints
 router.use(accountRouter);
 
-// Clerk-admin endpoints (role=admin in users table)
-router.use("/admin", attachUser, requireAdmin, adminUsersRouter);
-
 // Legacy admin-token endpoints
 router.use(adminAuth);
+router.use("/admin", adminUsersRouter);
 router.use(emailsRouter);
 router.use(domainsRouter);
 router.use(adsRouter);
