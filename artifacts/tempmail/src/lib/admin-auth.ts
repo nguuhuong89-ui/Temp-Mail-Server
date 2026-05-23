@@ -38,11 +38,23 @@ export function installAdminTokenFetcher(): void {
 
 export type AuthStatus = { required: boolean };
 
+let _cachedAuthStatus: AuthStatus | null = null;
+let _authStatusPromise: Promise<AuthStatus> | null = null;
+
 export async function fetchAuthStatus(): Promise<AuthStatus> {
+  if (_cachedAuthStatus !== null) return _cachedAuthStatus;
+  if (_authStatusPromise) return _authStatusPromise;
   const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-  const res = await fetch(`${base}/api/admin/auth/status`);
-  if (!res.ok) return { required: false };
-  return (await res.json()) as AuthStatus;
+  _authStatusPromise = fetch(`${base}/api/admin/auth/status`)
+    .then((res) => (res.ok ? res.json() : { required: false }))
+    .then((s) => { _cachedAuthStatus = s as AuthStatus; _authStatusPromise = null; return s as AuthStatus; })
+    .catch(() => { _authStatusPromise = null; return { required: false }; });
+  return _authStatusPromise;
+}
+
+export function clearAuthStatusCache(): void {
+  _cachedAuthStatus = null;
+  _authStatusPromise = null;
 }
 
 export async function loginWithToken(token: string): Promise<boolean> {

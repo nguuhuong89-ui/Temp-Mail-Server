@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { useGetDashboardStats, useGetRecentActivity, useGetEmailTimeseries } from "@workspace/api-client-react";
-import { Mail, Globe, Users, Megaphone, Activity, RefreshCw, TrendingUp, Inbox } from "lucide-react";
+import { Mail, Globe, Users, Megaphone, Activity, TrendingUp, Inbox } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { formatDistanceToNow } from "date-fns";
 
@@ -78,19 +78,6 @@ export default function Dashboard() {
   const { data: activity, isLoading: activityLoading } = useGetRecentActivity();
   const { data: timeseries, isLoading: timeseriesLoading } = useGetEmailTimeseries();
 
-  if (statsLoading || activityLoading || timeseriesLoading) {
-    return (
-      <AdminLayout>
-        <div className="h-[500px] flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-slate-400">
-            <RefreshCw className="h-8 w-8 animate-spin" />
-            <span className="text-sm">Đang tải dữ liệu...</span>
-          </div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -115,15 +102,18 @@ export default function Dashboard() {
                 <div className={`h-1 bg-gradient-to-r ${card.color}`} />
                 <div className="p-5">
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex-1">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{card.label}</p>
-                      <p className="text-2xl font-bold mt-1">
-                        {stats ? card.getValue(stats as StatsData) : "—"}
-                      </p>
-                      {stats && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {card.getSub(stats as StatsData)}
-                        </p>
+                      {statsLoading ? (
+                        <>
+                          <div className="h-8 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mt-1" />
+                          <div className="h-3 w-24 bg-slate-100 dark:bg-slate-800 rounded animate-pulse mt-2" />
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-2xl font-bold mt-1">{stats ? card.getValue(stats as StatsData) : "—"}</p>
+                          {stats && <p className="text-xs text-muted-foreground mt-1">{card.getSub(stats as StatsData)}</p>}
+                        </>
                       )}
                     </div>
                     <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center shadow-lg ${card.shadow}`}>
@@ -145,7 +135,11 @@ export default function Dashboard() {
               <h2 className="font-semibold text-sm">Email Volume (24h)</h2>
             </div>
             <div className="p-4 h-[280px]">
-              {timeseries && timeseries.length > 0 ? (
+              {timeseriesLoading ? (
+                <div className="h-full flex items-center justify-center">
+                  <div className="w-full h-full bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                </div>
+              ) : timeseries && timeseries.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={timeseries} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground)/0.1)" />
@@ -199,7 +193,16 @@ export default function Dashboard() {
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               <div className="space-y-3">
-                {activity?.map((item) => (
+                {activityLoading && Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="h-7 w-7 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                      <div className="h-2.5 w-1/3 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+                {!activityLoading && activity?.map((item) => (
                   <div key={item.id} className="flex items-start gap-3">
                     <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${getActivityColor(item.message)}`}>
                       <Activity className="h-3.5 w-3.5" />
