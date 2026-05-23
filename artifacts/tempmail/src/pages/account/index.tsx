@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-fetch";
 import { Mail, Key, Globe, Crown, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 
 type AccountInbox = { id: number; address: string; emailCount: number; expiresAt: string };
 
 export default function AccountHome() {
+  const { t } = useTranslation();
   const { data: me } = useMe();
   const { data: inboxes } = useQuery<AccountInbox[]>({
     queryKey: ["/account/inboxes"],
@@ -21,18 +23,18 @@ export default function AccountHome() {
   });
 
   const stats = [
-    { label: "Inbox đã tạo", value: inboxes?.length ?? 0, icon: Mail, href: "/account/inboxes" },
-    { label: "API Key", value: me?.plan === "pro" ? (keys?.length ?? 0) : "—", icon: Key, href: "/account/api-keys" },
-    { label: "Gói cước", value: me?.plan === "pro" ? "Pro" : "Free", icon: Crown, href: "/account/plan" },
-    { label: "Domain riêng", value: me?.plan === "pro" ? "Quản lý" : "—", icon: Globe, href: "/account/domains" },
+    { label: t("accountHome.statInboxes"), value: inboxes?.length ?? 0, icon: Mail, href: "/account/inboxes" },
+    { label: t("accountHome.statApiKey"), value: me?.plan === "pro" ? (keys?.length ?? 0) : "—", icon: Key, href: "/account/api-keys" },
+    { label: t("accountHome.statPlan"), value: me?.plan === "pro" ? "Pro" : "Free", icon: Crown, href: "/account/plan" },
+    { label: t("accountHome.statDomains"), value: me?.plan === "pro" ? t("accountHome.statManage") : "—", icon: Globe, href: "/account/domains" },
   ];
 
   return (
     <AccountLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Xin chào 👋</h1>
-          <p className="text-muted-foreground">Quản lý inbox, API key và domain của bạn ở đây.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("accountHome.greeting")}</h1>
+          <p className="text-muted-foreground">{t("accountHome.subtitle")}</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -54,14 +56,12 @@ export default function AccountHome() {
         {me?.plan !== "pro" && (
           <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-900">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-amber-600" /> Nâng cấp lên Pro</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-amber-600" /> {t("accountHome.upgradeTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Mở khoá API cho AI agent và thêm domain riêng của bạn.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("accountHome.upgradeDesc")}</p>
               <Link href="/account/plan" className="text-sm text-primary font-medium inline-flex items-center gap-1">
-                Xem chi tiết <ArrowRight className="h-3 w-3" />
+                {t("accountHome.upgradeLink")} <ArrowRight className="h-3 w-3" />
               </Link>
             </CardContent>
           </Card>

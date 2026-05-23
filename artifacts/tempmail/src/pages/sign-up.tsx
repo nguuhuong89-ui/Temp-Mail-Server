@@ -2,10 +2,12 @@ import { SignUp } from "@clerk/react";
 import { PublicLayout } from "@/components/layout/public-layout";
 import { Mail } from "lucide-react";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function SignUpPage() {
+  const { t } = useTranslation();
   return (
     <PublicLayout>
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] px-4 py-12">
@@ -13,11 +15,11 @@ export default function SignUpPage() {
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-xl shadow-violet-500/30 mb-4">
             <Mail className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Tạo tài khoản</h1>
+          <h1 className="text-2xl font-bold text-white">{t("signUp.title")}</h1>
           <p className="text-white/50 text-sm mt-1">
-            Đã có tài khoản?{" "}
+            {t("signUp.hasAccount")}{" "}
             <Link href="/sign-in" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
-              Đăng nhập ngay
+              {t("signUp.signInNow")}
             </Link>
           </p>
         </div>
