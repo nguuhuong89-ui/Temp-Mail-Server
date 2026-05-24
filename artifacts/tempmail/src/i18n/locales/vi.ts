@@ -145,6 +145,14 @@ const vi: Translations = {
     close: "Đóng",
     updated: "Đã cập nhật",
   },
+  accountLayout: {
+    overview: "Tổng quan",
+    backHome: "Về trang chủ",
+    signOut: "Đăng xuất",
+    openMenu: "Mở menu",
+    menuTitle: "Menu tài khoản",
+    adminConsole: "Admin Console",
+  },
   signIn: {
     title: "Đăng nhập",
     noAccount: "Chưa có tài khoản?",

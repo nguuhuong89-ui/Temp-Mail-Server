@@ -64,12 +64,12 @@ export default function EmailsExplorer() {
     mutationFn: (body: object) => apiFetch("/api/emails/bulk", { method: "DELETE", body: JSON.stringify(body) }),
     onSuccess: (res: unknown) => {
       const r = res as { deleted: number };
-      toast({ title: `Đã xóa ${r.deleted} email` });
+      toast({ title: `Deleted ${r.deleted} email(s)` });
       setSelected(new Set());
       setConfirmOpen(false);
       void qc.invalidateQueries({ queryKey: ["admin-emails-paginated"] });
     },
-    onError: () => toast({ title: "Xóa thất bại", variant: "destructive" }),
+    onError: () => toast({ title: "Delete failed", variant: "destructive" }),
   });
 
   const toggleSelect = (id: number) => {
@@ -104,7 +104,7 @@ export default function EmailsExplorer() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">System Emails</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Quản lý toàn bộ email nhận được — tổng: <strong>{total.toLocaleString()}</strong></p>
+            <p className="text-muted-foreground text-sm mt-0.5">Manage all received emails — total: <strong>{total.toLocaleString()}</strong></p>
           </div>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void qc.invalidateQueries({ queryKey: ["admin-emails-paginated"] })} disabled={isFetching}>
             <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} /> Refresh
@@ -115,22 +115,22 @@ export default function EmailsExplorer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="relative sm:col-span-2 lg:col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Tìm subject, from, to..." className="pl-9" value={search}
+            <Input placeholder="Search subject, from, to..." className="pl-9" value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
           </div>
           <Select value={domainId} onValueChange={(v) => { setDomainId(v); setPage(1); }}>
             <SelectTrigger><SelectValue placeholder="Domain" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả Domains</SelectItem>
+              <SelectItem value="all">All Domains</SelectItem>
               {domains?.map((d) => <SelectItem key={d.id} value={d.id.toString()}>@{d.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground shrink-0">Từ</span>
+            <span className="text-xs text-muted-foreground shrink-0">From</span>
             <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="text-sm" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground shrink-0">Đến</span>
+            <span className="text-xs text-muted-foreground shrink-0">To</span>
             <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="text-sm" />
           </div>
         </div>
@@ -140,19 +140,19 @@ export default function EmailsExplorer() {
           <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">
             {selected.size > 0 && (
               <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                Đã chọn <strong>{selected.size}</strong> email
+                Selected <strong>{selected.size}</strong> email(s)
               </span>
             )}
             <div className="flex gap-2 ml-auto">
               {selected.size > 0 && (
                 <Button size="sm" variant="destructive" className="h-7 px-3 text-xs gap-1.5"
                   onClick={() => openConfirm("selected")} disabled={deleteMut.isPending}>
-                  <Trash2 className="h-3 w-3" /> Xóa đã chọn ({selected.size})
+                  <Trash2 className="h-3 w-3" /> Delete Selected ({selected.size})
                 </Button>
               )}
               <Button size="sm" variant="outline" className="h-7 px-3 text-xs gap-1.5 border-rose-300 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                 onClick={() => openConfirm("all")} disabled={deleteMut.isPending || total === 0}>
-                <Trash2 className="h-3 w-3" /> Xóa tất cả kết quả ({total.toLocaleString()})
+                <Trash2 className="h-3 w-3" /> Delete All Results ({total.toLocaleString()})
               </Button>
             </div>
           </div>
@@ -164,17 +164,17 @@ export default function EmailsExplorer() {
             <button onClick={toggleAll} className="flex items-center justify-center text-muted-foreground hover:text-foreground">
               {allSelected ? <CheckSquare className="h-4 w-4 text-indigo-500" /> : <Square className="h-4 w-4" />}
             </button>
-            <span>Nhận</span><span>To</span><span>From</span><span>Subject</span>
-            <span className="text-right">Xem</span>
+            <span>Received</span><span>To</span><span>From</span><span>Subject</span>
+            <span className="text-right">View</span>
           </div>
 
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
-              <RefreshCw className="h-6 w-6 animate-spin mr-2" /><span className="text-sm">Đang tải...</span>
+              <RefreshCw className="h-6 w-6 animate-spin mr-2" /><span className="text-sm">Loading...</span>
             </div>
           ) : emails.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-              <Mail className="h-10 w-10 opacity-20" /><p className="text-sm">Không tìm thấy email.</p>
+              <Mail className="h-10 w-10 opacity-20" /><p className="text-sm">No emails found.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -195,7 +195,7 @@ export default function EmailsExplorer() {
                   </div>
                   <div className="flex justify-end">
                     <Button variant="ghost" size="sm" asChild className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground">
-                      <Link href={`/email/${email.id}`}><Eye className="h-3.5 w-3.5" /> Xem</Link>
+                      <Link href={`/email/${email.id}`}><Eye className="h-3.5 w-3.5" /> View</Link>
                     </Button>
                   </div>
                 </div>
@@ -229,20 +229,20 @@ export default function EmailsExplorer() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-rose-500" />
-              Xác nhận xóa email
+              Confirm Delete
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-1">
             <p className="text-sm text-muted-foreground">
               {confirmMode === "selected"
-                ? <>Bạn sẽ xóa <strong className="text-foreground">{selected.size} email</strong> đã chọn.</>
-                : <>Bạn sẽ xóa <strong className="text-rose-600">{total.toLocaleString()} email</strong> khớp với bộ lọc hiện tại. <strong>Không thể hoàn tác!</strong></>}
+                ? <>You will delete <strong className="text-foreground">{selected.size} email(s)</strong> selected.</>
+                : <>You will delete <strong className="text-rose-600">{total.toLocaleString()} email(s)</strong> matching the current filter. <strong>This cannot be undone!</strong></>}
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setConfirmOpen(false)}>Hủy</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setConfirmOpen(false)}>Cancel</Button>
               <Button variant="destructive" className="flex-1 gap-1.5" onClick={doDelete} disabled={deleteMut.isPending}>
                 {deleteMut.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                Xóa ngay
+                Delete Now
               </Button>
             </div>
           </div>

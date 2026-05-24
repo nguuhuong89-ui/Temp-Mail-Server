@@ -30,7 +30,7 @@ const STAT_CARDS: {
     color: "from-violet-500 to-purple-600",
     shadow: "shadow-violet-500/20",
     getValue: (s) => s.totalEmails.toLocaleString(),
-    getSub: (s) => `+${s.emailsToday.toLocaleString()} hôm nay`,
+    getSub: (s) => `+${s.emailsToday.toLocaleString()} today`,
   },
   {
     key: "inboxes",
@@ -39,7 +39,7 @@ const STAT_CARDS: {
     color: "from-indigo-500 to-blue-600",
     shadow: "shadow-indigo-500/20",
     getValue: (s) => s.activeInboxes.toLocaleString(),
-    getSub: () => "đang hoạt động",
+    getSub: () => "currently active",
   },
   {
     key: "domains",
@@ -48,7 +48,7 @@ const STAT_CARDS: {
     color: "from-sky-500 to-cyan-600",
     shadow: "shadow-sky-500/20",
     getValue: (s) => `${s.activeDomains} Active`,
-    getSub: (s) => `${s.totalDomains} tổng cộng`,
+    getSub: (s) => `${s.totalDomains} total`,
   },
   {
     key: "ads",
@@ -57,7 +57,7 @@ const STAT_CARDS: {
     color: "from-amber-500 to-orange-500",
     shadow: "shadow-amber-500/20",
     getValue: (s) => s.activeAds.toString(),
-    getSub: (s) => `${s.totalAds} chiến dịch`,
+    getSub: (s) => `${s.totalAds} campaigns`,
   },
 ];
 
@@ -85,7 +85,7 @@ export default function Dashboard() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Tổng quan hệ thống TempMail của bạn.</p>
+            <p className="text-muted-foreground text-sm mt-0.5">TempMail system overview.</p>
           </div>
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -179,7 +179,7 @@ export default function Dashboard() {
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
                   <Mail className="h-8 w-8 opacity-20" />
-                  <span className="text-sm">Chưa có email trong 24h qua.</span>
+                  <span className="text-sm">No emails in the last 24h.</span>
                 </div>
               )}
             </div>
@@ -218,7 +218,7 @@ export default function Dashboard() {
                 {!activity?.length && (
                   <div className="text-center text-sm text-muted-foreground py-8">
                     <Activity className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    Chưa có hoạt động.
+                    No recent activity.
                   </div>
                 )}
               </div>

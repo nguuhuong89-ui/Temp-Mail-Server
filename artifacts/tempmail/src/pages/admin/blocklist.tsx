@@ -40,15 +40,15 @@ export default function Blocklist() {
           setPattern("");
           setNote("");
           refresh();
-          toast({ title: "Đã thêm vào blocklist" });
+          toast({ title: "Added to blocklist" });
         },
-        onError: () => toast({ title: "Thêm thất bại", variant: "destructive" }),
+        onError: () => toast({ title: "Failed to add", variant: "destructive" }),
       },
     );
   };
 
   const remove = (id: number) => {
-    del.mutate({ id }, { onSuccess: () => { refresh(); toast({ title: "Đã xóa" }); } });
+    del.mutate({ id }, { onSuccess: () => { refresh(); toast({ title: "Removed" }); } });
   };
 
   return (
@@ -57,26 +57,26 @@ export default function Blocklist() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Blocklist</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Chặn mail đến từ sender hoặc domain cụ thể.</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Block incoming mail from specific senders or domains.</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 border-0 shrink-0">
-                <Plus className="h-4 w-4 mr-2" /> Thêm Rule
+                <Plus className="h-4 w-4 mr-2" /> Add Rule
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Thêm Blocklist Rule</DialogTitle>
+                <DialogTitle>Add Blocklist Rule</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label>Kiểu chặn</Label>
+                  <Label>Block type</Label>
                   <Select value={type} onValueChange={(v) => setType(v as "sender" | "domain")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sender">Exact sender (VD: spam@example.com)</SelectItem>
-                      <SelectItem value="domain">Toàn bộ domain (VD: example.com)</SelectItem>
+                      <SelectItem value="sender">Exact sender (e.g. spam@example.com)</SelectItem>
+                      <SelectItem value="domain">Entire domain (e.g. example.com)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -90,9 +90,9 @@ export default function Blocklist() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Ghi chú (tùy chọn)</Label>
+                  <Label>Note (optional)</Label>
                   <Input
-                    placeholder="Lý do chặn?"
+                    placeholder="Reason for blocking?"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                   />
@@ -102,7 +102,7 @@ export default function Blocklist() {
                   onClick={submit}
                   disabled={create.isPending || !pattern.trim()}
                 >
-                  {create.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Thêm vào blocklist"}
+                  {create.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Add to blocklist"}
                 </Button>
               </div>
             </DialogContent>
@@ -112,20 +112,20 @@ export default function Blocklist() {
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="grid grid-cols-[1fr_90px_1fr_50px] gap-4 px-5 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <span>Pattern</span>
-            <span>Kiểu</span>
-            <span>Ghi chú</span>
+            <span>Type</span>
+            <span>Note</span>
             <span />
           </div>
 
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
               <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-              <span className="text-sm">Đang tải...</span>
+              <span className="text-sm">Loading...</span>
             </div>
           ) : !entries?.length ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
               <ShieldAlert className="h-10 w-10 opacity-20" />
-              <p className="text-sm">Chưa có rule nào. Thêm để bắt đầu lọc spam.</p>
+              <p className="text-sm">No rules yet. Add one to start filtering spam.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">

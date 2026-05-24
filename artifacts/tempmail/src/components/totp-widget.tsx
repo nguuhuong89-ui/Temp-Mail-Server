@@ -32,7 +32,7 @@ export function TotpWidget() {
       setActiveSecret(trimmed);
     } catch (e) {
       if (myReqId !== reqIdRef.current) return;
-      const msg = e instanceof Error ? e.message : "Secret không hợp lệ";
+      const msg = e instanceof Error ? e.message : "Invalid secret";
       setError(msg);
       setCode(null);
       setActiveSecret(null);
@@ -64,7 +64,7 @@ export function TotpWidget() {
   const handleCopy = async () => {
     if (!code) return;
     await navigator.clipboard.writeText(code);
-    toast({ title: "Đã copy mã 2FA", description: code });
+    toast({ title: "2FA code copied", description: code });
   };
 
   const progressPct = code ? (remaining / period) * 100 : 0;
@@ -73,11 +73,11 @@ export function TotpWidget() {
     <div className="rounded-2xl border bg-card p-4 sm:p-5 space-y-3">
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-5 w-5 text-primary" />
-        <h3 className="font-semibold">Trình tạo mã 2FA (TOTP)</h3>
+        <h3 className="font-semibold">2FA Code Generator (TOTP)</h3>
       </div>
       <p className="text-xs text-muted-foreground">
-        Dán secret 2FA (base32) hoặc URI <code className="font-mono">otpauth://...</code> để lấy mã 6 số đang hiệu lực.
-        Secret KHÔNG được lưu.
+        Paste a 2FA secret (base32) or URI <code className="font-mono">otpauth://...</code> to get the current 6-digit code.
+        The secret is NOT stored.
       </p>
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1 relative">
@@ -85,7 +85,7 @@ export function TotpWidget() {
           <Input
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
-            placeholder="JBSWY3DPEHPK3PXP hoặc otpauth://..."
+            placeholder="JBSWY3DPEHPK3PXP or otpauth://..."
             className="pl-9 font-mono text-sm"
             data-testid="input-totp-secret"
           />
@@ -95,7 +95,7 @@ export function TotpWidget() {
           disabled={loading || !secret.trim()}
           data-testid="button-totp-generate"
         >
-          {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Tạo mã"}
+          {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Generate"}
         </Button>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -112,10 +112,10 @@ export function TotpWidget() {
               />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Hết hạn sau {remaining}s
+              Expires in {remaining}s
             </p>
           </div>
-          <Button variant="outline" size="icon" onClick={handleCopy} aria-label="Copy mã">
+          <Button variant="outline" size="icon" onClick={handleCopy} aria-label="Copy code">
             <Copy className="h-4 w-4" />
           </Button>
         </div>

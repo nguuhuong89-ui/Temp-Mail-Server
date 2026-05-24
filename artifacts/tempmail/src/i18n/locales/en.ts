@@ -143,6 +143,14 @@ const en = {
     close: "Close",
     updated: "Updated",
   },
+  accountLayout: {
+    overview: "Overview",
+    backHome: "Back to Home",
+    signOut: "Sign Out",
+    openMenu: "Open menu",
+    menuTitle: "Account menu",
+    adminConsole: "Admin Console",
+  },
   signIn: {
     title: "Sign In",
     noAccount: "Don't have an account?",

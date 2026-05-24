@@ -145,6 +145,14 @@ const zh: Translations = {
     close: "关闭",
     updated: "已更新",
   },
+  accountLayout: {
+    overview: "总览",
+    backHome: "返回首页",
+    signOut: "登出",
+    openMenu: "打开菜单",
+    menuTitle: "账号菜单",
+    adminConsole: "Admin Console",
+  },
   signIn: {
     title: "登录",
     noAccount: "还没有账号？",

@@ -17,6 +17,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-fetch";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useTranslation } from "react-i18next";
 
 type Me = { id: string; plan: "free" | "pro"; role: "user" | "admin"; email: string | null };
 
@@ -39,10 +40,11 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isLoaded, isSignedIn, redirectToSignIn]);
 
+  const { t } = useTranslation();
   if (!isLoaded || !isSignedIn) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center text-muted-foreground">
-        Đang tải…
+        {t("common.loading")}
       </div>
     );
   }
@@ -51,24 +53,25 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
 }
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useTranslation();
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
   const { data: me } = useMe();
 
   const nav = [
-    { href: "/account", label: "Tổng quan", icon: InboxIcon },
-    { href: "/account/inboxes", label: "Inbox của tôi", icon: Mail },
+    { href: "/account", label: t("accountLayout.overview"), icon: InboxIcon },
+    { href: "/account/inboxes", label: t("account.inboxes"), icon: Mail },
     { href: "/account/api-keys", label: "API Keys", icon: Key, proOnly: true },
-    { href: "/account/domains", label: "Domain riêng", icon: Globe, proOnly: true },
-    { href: "/account/plan", label: "Gói cước", icon: Crown },
+    { href: "/account/domains", label: t("account.domains"), icon: Globe, proOnly: true },
+    { href: "/account/plan", label: t("account.plan"), icon: Crown },
   ];
 
   return (
     <>
       <div className="h-16 flex items-center px-6 border-b">
         <span className="font-bold text-lg flex items-center gap-2">
-          <Mail className="h-5 w-5 text-primary" /> Tài khoản
+          <Mail className="h-5 w-5 text-primary" /> {t("account.title")}
         </span>
       </div>
       <div className="px-4 py-3 border-b text-sm">
@@ -125,7 +128,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               onClick={onNavigate}
               className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-muted text-muted-foreground hover:text-foreground"
             >
-              <Crown className="h-4 w-4" /> Admin Console
+              <Crown className="h-4 w-4" /> {t("accountLayout.adminConsole")}
             </Link>
           )}
         </nav>
@@ -137,7 +140,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-2"
           >
-            <ArrowLeft className="h-4 w-4" /> Về trang chủ
+            <ArrowLeft className="h-4 w-4" /> {t("accountLayout.backHome")}
           </Link>
           <ThemeToggle />
         </div>
@@ -147,7 +150,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           onClick={() => signOut({ redirectUrl: basePath || "/" })}
           data-testid="button-signout"
         >
-          <LogOut className="h-4 w-4 mr-2" /> Đăng xuất
+          <LogOut className="h-4 w-4 mr-2" /> {t("accountLayout.signOut")}
         </Button>
       </div>
     </>
@@ -155,6 +158,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function AccountLayoutInner({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-muted/20 text-foreground">
@@ -162,17 +166,17 @@ function AccountLayoutInner({ children }: { children: React.ReactNode }) {
       <header className="md:hidden sticky top-0 z-30 h-14 border-b bg-background/95 backdrop-blur flex items-center gap-3 px-4">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Mở menu">
+            <Button variant="ghost" size="icon" aria-label={t("accountLayout.openMenu")}>
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-72 flex flex-col">
-            <SheetTitle className="sr-only">Menu tài khoản</SheetTitle>
+            <SheetTitle className="sr-only">{t("accountLayout.menuTitle")}</SheetTitle>
             <SidebarContent onNavigate={() => setOpen(false)} />
           </SheetContent>
         </Sheet>
         <span className="font-bold text-base flex items-center gap-2">
-          <Mail className="h-5 w-5 text-primary" /> Tài khoản
+          <Mail className="h-5 w-5 text-primary" /> {t("account.title")}
         </span>
         <div className="ml-auto">
           <ThemeToggle />

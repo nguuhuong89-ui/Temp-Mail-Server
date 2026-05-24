@@ -42,8 +42,8 @@ function CopyButton({ value }: { value: string }) {
   return (
     <button
       className="ml-1 p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground transition-colors"
-      onClick={() => { navigator.clipboard.writeText(value); toast({ title: "Đã sao chép" }); }}
-      title="Sao chép"
+      onClick={() => { navigator.clipboard.writeText(value); toast({ title: "Copied" }); }}
+      title="Copy"
     >
       <Copy className="h-3 w-3" />
     </button>
@@ -96,18 +96,18 @@ function DnsSetupGuide({ domain, serverInfo }: { domain: string; serverInfo: Ser
     a.download = `${domain}.zone`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "Đã tải xuống zone file", description: `${domain}.zone` });
+    toast({ title: "Zone file downloaded", description: `${domain}.zone` });
   };
 
   const handleCopyZone = () => {
     navigator.clipboard.writeText(zoneContent);
-    toast({ title: "Đã copy zone file", description: "Dán vào Cloudflare → Import DNS records" });
+    toast({ title: "Zone file copied", description: "Paste in Cloudflare → Import DNS records" });
   };
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Thêm các record sau vào DNS manager của <strong className="text-foreground">{domain}</strong> (Cloudflare, Route53, Namecheap…):
+        Add the following records to the DNS manager of <strong className="text-foreground">{domain}</strong> (Cloudflare, Route53, Namecheap…):
       </p>
       <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="grid grid-cols-[60px_80px_1fr_70px] gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-slate-200 dark:border-slate-700">
@@ -122,10 +122,10 @@ function DnsSetupGuide({ domain, serverInfo }: { domain: string; serverInfo: Ser
       <div className="rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 p-3 space-y-2">
         <div className="flex items-center gap-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
           <FileCode2 className="h-3.5 w-3.5" />
-          Export cho Cloudflare (BIND zone file)
+          Export for Cloudflare (BIND zone file)
         </div>
         <p className="text-xs text-indigo-600/70 dark:text-indigo-400/70">
-          Tải file <code className="font-mono">.zone</code> rồi import tại <strong>Cloudflare → DNS → Import DNS records</strong> để tự động thêm tất cả records.
+          Download the <code className="font-mono">.zone</code> file and import at <strong>Cloudflare → DNS → Import DNS records</strong> to auto-add all records.
         </p>
         <div className="flex gap-2">
           <Button
@@ -135,7 +135,7 @@ function DnsSetupGuide({ domain, serverInfo }: { domain: string; serverInfo: Ser
             onClick={handleDownload}
             disabled={!ready}
           >
-            <Download className="h-3 w-3" /> Tải .zone file
+            <Download className="h-3 w-3" /> Download .zone file
           </Button>
           <Button
             size="sm"
@@ -150,7 +150,7 @@ function DnsSetupGuide({ domain, serverInfo }: { domain: string; serverInfo: Ser
       </div>
 
       <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-300">
-        ⏱ DNS propagation thường mất <strong>vài phút đến 24h</strong>. Sau khi cấu hình xong, quay lại và nhấn nút <strong>DNS</strong> để kiểm tra.
+        ⏱ DNS propagation typically takes <strong>a few minutes to 24h</strong>. After configuring, come back and click the <strong>DNS</strong> button to verify.
       </div>
     </div>
   );
@@ -172,7 +172,7 @@ function DnsResultDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wifi className="h-4 w-4 text-indigo-500" />
-            Kiểm tra DNS — {result.domain}
+            DNS Check — {result.domain}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 pt-1">
@@ -183,12 +183,12 @@ function DnsResultDialog({
                 ? <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 : <XCircle className="h-4 w-4 text-red-500" />}
               <span className={result.mxValid ? "text-emerald-800 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}>
-                MX Record — {result.mxValid ? "OK" : "Chưa tìm thấy"}
+                MX Record — {result.mxValid ? "OK" : "Not found"}
               </span>
             </div>
             {result.mxRecords.length > 0
               ? result.mxRecords.map((r) => <code key={r} className="block text-xs font-mono pl-6 text-foreground">{r}</code>)
-              : <p className="text-xs pl-6 text-muted-foreground">Không tìm thấy MX record nào.</p>}
+              : <p className="text-xs pl-6 text-muted-foreground">No MX records found.</p>}
           </div>
 
           {/* SPF */}
@@ -198,15 +198,15 @@ function DnsResultDialog({
                 ? <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 : <XCircle className="h-4 w-4 text-amber-500" />}
               <span className={result.spfValid ? "text-emerald-800 dark:text-emerald-300" : "text-amber-800 dark:text-amber-300"}>
-                SPF Record (TXT) — {result.spfValid ? "OK" : "Chưa cấu hình"}
+                SPF Record (TXT) — {result.spfValid ? "OK" : "Not configured"}
               </span>
             </div>
             {result.spfRecords.length > 0
               ? result.spfRecords.map((r) => <code key={r} className="block text-xs font-mono pl-6 text-foreground">{r}</code>)
-              : <p className="text-xs pl-6 text-muted-foreground">Khuyến nghị: <code className="font-mono">v=spf1 mx ~all</code></p>}
+              : <p className="text-xs pl-6 text-muted-foreground">Recommended: <code className="font-mono">v=spf1 mx ~all</code></p>}
           </div>
 
-          <p className="text-xs text-muted-foreground text-right">Kiểm tra lúc: {new Date(result.checkedAt).toLocaleTimeString("vi-VN")}</p>
+          <p className="text-xs text-muted-foreground text-right">Checked at: {new Date(result.checkedAt).toLocaleTimeString()}</p>
 
           <Button
             className="w-full gap-2"
@@ -215,7 +215,7 @@ function DnsResultDialog({
             disabled={isChecking}
           >
             {isChecking ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Kiểm tra lại
+            Re-check
           </Button>
         </div>
       </DialogContent>
@@ -270,7 +270,7 @@ export default function Domains() {
           setCreatedDomainName(newDomain.trim().toLowerCase());
           setCreateStep(1);
         },
-        onError: () => toast({ title: "Thêm domain thất bại", variant: "destructive" }),
+        onError: () => toast({ title: "Failed to add domain", variant: "destructive" }),
       },
     );
   };
@@ -282,9 +282,9 @@ export default function Domains() {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListDomainsQueryKey() });
           setEditingDomainId(null);
-          toast({ title: "Webhook đã lưu" });
+          toast({ title: "Webhook saved" });
         },
-        onError: () => toast({ title: "URL webhook không hợp lệ", variant: "destructive" }),
+        onError: () => toast({ title: "Invalid webhook URL", variant: "destructive" }),
       },
     );
   };
@@ -296,11 +296,11 @@ export default function Domains() {
   };
 
   const handleDelete = (id: number) => {
-    if (!confirm("Xóa domain này sẽ xóa tất cả inbox và email liên quan. Tiếp tục?")) return;
+    if (!confirm("Deleting this domain will remove all associated inboxes and emails. Continue?")) return;
     deleteDomain.mutate({ id }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListDomainsQueryKey() });
-        toast({ title: "Domain đã xóa" });
+        toast({ title: "Domain deleted" });
       },
     });
   };
@@ -312,7 +312,7 @@ export default function Domains() {
         setDnsResult(res as unknown as DnsCheckResult);
         setDnsResultOpen(true);
       },
-      onError: () => toast({ title: "Không thể kiểm tra DNS", variant: "destructive" }),
+      onError: () => toast({ title: "DNS check failed", variant: "destructive" }),
     });
   };
 
@@ -322,7 +322,7 @@ export default function Domains() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Domains</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Quản lý pool email suffix cho instance của bạn.</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Manage the email suffix pool for your instance.</p>
           </div>
 
           {/* Create Dialog — 2 steps */}
@@ -337,12 +337,12 @@ export default function Domains() {
                 <>
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                      <Globe className="h-4 w-4 text-indigo-500" /> Thêm Domain Mới
+                      <Globe className="h-4 w-4 text-indigo-500" /> Add New Domain
                     </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-4">
                     <div className="space-y-2">
-                      <Label>Tên Domain</Label>
+                      <Label>Domain Name</Label>
                       <Input
                         placeholder="example.com"
                         value={newDomain}
@@ -353,18 +353,18 @@ export default function Domains() {
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
                       <div>
                         <Label className="font-medium">Public</Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">Cho phép tạo inbox ngẫu nhiên trên domain này</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Allow random inbox creation on this domain</p>
                       </div>
                       <Switch checked={newDomainPublic} onCheckedChange={setNewDomainPublic} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Webhook URL (tùy chọn)</Label>
+                      <Label>Webhook URL (optional)</Label>
                       <Input
                         placeholder="https://hooks.example.com/incoming"
                         value={newWebhookUrl}
                         onChange={(e) => setNewWebhookUrl(e.target.value)}
                       />
-                      <p className="text-xs text-muted-foreground">Nhận POST notification mỗi khi có email đến domain này.</p>
+                      <p className="text-xs text-muted-foreground">Receive POST notifications for every email arriving at this domain.</p>
                     </div>
                     <Button
                       className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 gap-2"
@@ -373,7 +373,7 @@ export default function Domains() {
                     >
                       {createDomain.isPending
                         ? <RefreshCw className="h-4 w-4 animate-spin" />
-                        : <><ArrowRight className="h-4 w-4" /> Thêm & Xem hướng dẫn DNS</>}
+                        : <><ArrowRight className="h-4 w-4" /> Add & View DNS guide</>}
                     </Button>
                   </div>
                 </>
@@ -382,7 +382,7 @@ export default function Domains() {
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                      Domain đã thêm — Cấu hình DNS
+                      Domain added — Configure DNS
                     </DialogTitle>
                   </DialogHeader>
                   <div className="pt-2">
@@ -398,13 +398,13 @@ export default function Domains() {
                           resetCreateDialog();
                         }}
                       >
-                        <Wifi className="h-3.5 w-3.5" /> Kiểm tra DNS ngay
+                        <Wifi className="h-3.5 w-3.5" /> Check DNS now
                       </Button>
                       <Button
                         className="flex-1"
                         onClick={() => { setIsCreateOpen(false); resetCreateDialog(); }}
                       >
-                        Xong
+                        Done
                       </Button>
                     </div>
                   </div>
@@ -428,7 +428,7 @@ export default function Domains() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-violet-500" /> Hướng dẫn DNS — {setupGuideFor}
+                <BookOpen className="h-4 w-4 text-violet-500" /> DNS Guide — {setupGuideFor}
               </DialogTitle>
             </DialogHeader>
             <div className="pt-2">
@@ -450,12 +450,12 @@ export default function Domains() {
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
               <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-              <span className="text-sm">Đang tải...</span>
+              <span className="text-sm">Loading...</span>
             </div>
           ) : !domains?.length ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
               <Globe className="h-10 w-10 opacity-20" />
-              <p className="text-sm">Chưa có domain nào. Thêm một domain để bắt đầu.</p>
+              <p className="text-sm">No domains yet. Add a domain to get started.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -494,7 +494,7 @@ export default function Domains() {
                       size="sm"
                       className="h-7 px-2.5 text-xs gap-1"
                       onClick={() => setSetupGuideFor(domain.name)}
-                      title="Hướng dẫn cấu hình DNS"
+                      title="DNS setup guide"
                     >
                       <BookOpen className="h-3 w-3" />
                       Setup
@@ -533,17 +533,17 @@ export default function Domains() {
                           <DialogTitle>Webhook — {domain.name}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-3 pt-2">
-                          <Label>POST URL (để trống để tắt)</Label>
+                          <Label>POST URL (leave empty to disable)</Label>
                           <Input
                             placeholder="https://hooks.example.com/incoming"
                             value={editingWebhookUrl}
                             onChange={(e) => setEditingWebhookUrl(e.target.value)}
                           />
                           <p className="text-xs text-muted-foreground">
-                            Mỗi email đến trigger một POST với JSON payload (event, from, to, subject, preview...).
+                            Each incoming email triggers a POST with JSON payload (event, from, to, subject, preview...).
                           </p>
                           <Button className="w-full" onClick={() => handleSaveWebhook(domain.id)} disabled={updateDomain.isPending}>
-                            Lưu webhook
+                            Save webhook
                           </Button>
                         </div>
                       </DialogContent>

@@ -61,7 +61,7 @@ export default function Ads() {
         invalidateAds();
         setIsCreateOpen(false);
         setNewAd({ name: "", placement: "sidebar", content: "", imageUrl: "", linkUrl: "", isActive: true });
-        toast({ title: "Campaign đã được tạo" });
+        toast({ title: "Campaign created" });
       },
     });
   };
@@ -71,9 +71,9 @@ export default function Ads() {
   };
 
   const handleDelete = (id: number) => {
-    if (!confirm("Xóa campaign này?")) return;
+    if (!confirm("Delete this campaign?")) return;
     deleteAd.mutate({ id }, {
-      onSuccess: () => { invalidateAds(); toast({ title: "Campaign đã xóa" }); },
+      onSuccess: () => { invalidateAds(); toast({ title: "Campaign deleted" }); },
     });
   };
 
@@ -83,72 +83,72 @@ export default function Ads() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Ad Campaigns</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Quản lý quảng cáo hiển thị cho người dùng.</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Manage ads displayed to users.</p>
           </div>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 shrink-0">
-                <Plus className="h-4 w-4 mr-2" /> Tạo Campaign
+                <Plus className="h-4 w-4 mr-2" /> New Campaign
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-xl">
               <DialogHeader>
-                <DialogTitle>Tạo Ad Campaign</DialogTitle>
+                <DialogTitle>Create Ad Campaign</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Tên Campaign</Label>
-                    <Input placeholder="VD: Summer Sale" value={newAd.name} onChange={(e) => setNewAd({ ...newAd, name: e.target.value })} />
+                    <Label>Campaign Name</Label>
+                    <Input placeholder="e.g. Summer Sale" value={newAd.name} onChange={(e) => setNewAd({ ...newAd, name: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Vị trí hiển thị</Label>
+                    <Label>Placement</Label>
                     <Select value={newAd.placement} onValueChange={(v: Placement) => setNewAd({ ...newAd, placement: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="header">Header (Đầu trang)</SelectItem>
+                        <SelectItem value="header">Header (Top)</SelectItem>
                         <SelectItem value="sidebar">Sidebar</SelectItem>
-                        <SelectItem value="inbox_top">Inbox Top (Trên email)</SelectItem>
-                        <SelectItem value="email_body">Email Body (Trong email)</SelectItem>
+                        <SelectItem value="inbox_top">Inbox Top (Above emails)</SelectItem>
+                        <SelectItem value="email_body">Email Body (Inside email)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center justify-between">
-                    <span>Nội dung / Mã nhúng</span>
+                    <span>Content / Embed Code</span>
                     <span className="text-[10px] font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                      Hỗ trợ: văn bản · HTML · AdSense · mã mạng quảng cáo
+                      Supports: text · HTML · AdSense · ad network code
                     </span>
                   </Label>
                   <Textarea
-                    placeholder={`Chọn một trong:\n① Văn bản: Ưu đãi 50% hôm nay!\n② HTML: <b>Flash Sale</b> <a href="...">Xem ngay</a>\n③ Mã AdSense/network: paste toàn bộ <script>...</script> hoặc <ins class="adsbygoogle"...>`}
+                    placeholder={`Choose one:\n① Text: 50% off today!\n② HTML: <b>Flash Sale</b> <a href="...">Shop now</a>\n③ AdSense/network code: paste full <script>...</script> or <ins class="adsbygoogle"...>`}
                     value={newAd.content}
                     onChange={(e) => setNewAd({ ...newAd, content: e.target.value })}
                     className="h-32 font-mono text-xs"
                   />
                   {newAd.content.trim().startsWith("<script") || newAd.content.includes("<ins ") ? (
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      ✓ Phát hiện mã nhúng — sẽ chạy trong iframe riêng (AdSense/network)
+                      ✓ Embed code detected — will run in a sandboxed iframe (AdSense/network)
                     </p>
                   ) : newAd.content.includes("<") ? (
                     <p className="text-xs text-indigo-500 flex items-center gap-1">
-                      ✓ Phát hiện HTML — sẽ render trực tiếp
+                      ✓ HTML detected — will render directly
                     </p>
                   ) : newAd.content ? (
-                    <p className="text-xs text-muted-foreground">Văn bản thuần</p>
+                    <p className="text-xs text-muted-foreground">Plain text</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label>URL Hình ảnh <span className="text-muted-foreground font-normal">(tùy chọn — chỉ dùng cho quảng cáo tự quản lý)</span></Label>
+                  <Label>Image URL <span className="text-muted-foreground font-normal">(optional — for self-managed ads only)</span></Label>
                   <Input placeholder="https://example.com/banner.jpg" value={newAd.imageUrl} onChange={(e) => setNewAd({ ...newAd, imageUrl: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Link đích <span className="text-muted-foreground font-normal">(tùy chọn — bỏ qua nếu dùng mã nhúng)</span></Label>
+                  <Label>Destination URL <span className="text-muted-foreground font-normal">(optional — skip if using embed code)</span></Label>
                   <Input placeholder="https://example.com/promo" value={newAd.linkUrl} onChange={(e) => setNewAd({ ...newAd, linkUrl: e.target.value })} />
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-                  <Label className="font-medium">Kích hoạt ngay</Label>
+                  <Label className="font-medium">Activate immediately</Label>
                   <Switch checked={newAd.isActive} onCheckedChange={(v) => setNewAd({ ...newAd, isActive: v })} />
                 </div>
                 <Button
@@ -156,7 +156,7 @@ export default function Ads() {
                   onClick={handleCreate}
                   disabled={createAd.isPending || !newAd.name || !newAd.content}
                 >
-                  {createAd.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Tạo Campaign"}
+                  {createAd.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Create Campaign"}
                 </Button>
               </div>
             </DialogContent>
@@ -166,7 +166,7 @@ export default function Ads() {
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="grid grid-cols-[1fr_120px_80px_100px_50px] gap-4 px-5 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <span>Campaign</span>
-            <span>Vị trí</span>
+            <span>Placement</span>
             <span>Active</span>
             <span>Impressions</span>
             <span />
@@ -175,12 +175,12 @@ export default function Ads() {
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
               <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-              <span className="text-sm">Đang tải...</span>
+              <span className="text-sm">Loading...</span>
             </div>
           ) : !ads?.length ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
               <Megaphone className="h-10 w-10 opacity-20" />
-              <p className="text-sm">Chưa có campaign nào. Tạo một campaign để bắt đầu.</p>
+              <p className="text-sm">No campaigns yet. Create one to get started.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">

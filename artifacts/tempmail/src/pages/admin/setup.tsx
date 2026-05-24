@@ -47,7 +47,7 @@ export default function SetupGuide() {
       <div className="space-y-8 max-w-3xl">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Setup Guide</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">Hướng dẫn cấu hình DNS để nhận email cho domain của bạn.</p>
+          <p className="text-muted-foreground text-sm mt-0.5">DNS configuration guide for receiving emails on your domain.</p>
         </div>
 
         {/* Steps */}
@@ -60,10 +60,10 @@ export default function SetupGuide() {
             </div>
             <div className="pb-6 flex-1">
               <h2 className="font-semibold mb-2 flex items-center gap-2">
-                <Globe className="h-4 w-4 text-violet-500" /> Thêm domain
+                <Globe className="h-4 w-4 text-violet-500" /> Add domain
               </h2>
               <p className="text-sm text-muted-foreground">
-                Vào tab <strong className="text-foreground">Domains</strong> trong console này và thêm domain của bạn. Chọn Public nếu muốn cho phép tạo inbox ngẫu nhiên, hoặc Private nếu chỉ dùng nội bộ.
+                Go to the <strong className="text-foreground">Domains</strong> tab in this console and add your domain. Choose Public to allow random inbox creation, or Private for internal use only.
               </p>
             </div>
           </div>
@@ -77,44 +77,44 @@ export default function SetupGuide() {
             <div className="pb-6 flex-1 space-y-4">
               <div>
                 <h2 className="font-semibold mb-2 flex items-center gap-2">
-                  <Server className="h-4 w-4 text-indigo-500" /> Cấu hình DNS Records
+                  <Server className="h-4 w-4 text-indigo-500" /> Configure DNS Records
                 </h2>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Thêm các record sau vào DNS settings của domain (Cloudflare, Route53, Namecheap, v.v.):
+                  Add the following records to your domain's DNS settings (Cloudflare, Route53, Namecheap, etc.):
                 </p>
               </div>
 
               <DnsBlock
-                title="A Record — trỏ subdomain về server"
+                title="A Record — point subdomain to server"
                 icon={Server}
                 color="text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30"
                 rows={[
                   { label: "Type", value: "A" },
                   { label: "Name/Host", value: "mail" },
                   { label: "Value", value: serverIp },
-                  { label: "TTL", value: "300 (hoặc Auto)" },
+                  { label: "TTL", value: "300 (or Auto)" },
                 ]}
               />
 
               <DnsBlock
-                title="MX Record — định tuyến email đến server"
+                title="MX Record — route incoming email to server"
                 icon={Mail}
                 color="text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/30"
                 rows={[
                   { label: "Type", value: "MX" },
-                  { label: "Name/Host", value: "@ (hoặc để trống)" },
+                  { label: "Name/Host", value: "@ (or leave blank)" },
                   { label: "Value", value: mailDomain },
                   { label: "Priority", value: "10" },
                 ]}
               />
 
               <DnsBlock
-                title="TXT Record — SPF (khuyến nghị)"
+                title="TXT Record — SPF (recommended)"
                 icon={CheckCircle2}
                 color="text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/30"
                 rows={[
                   { label: "Type", value: "TXT" },
-                  { label: "Name/Host", value: "@ (hoặc để trống)" },
+                  { label: "Name/Host", value: "@ (or leave blank)" },
                   { label: "Value", value: "v=spf1 mx -all" },
                 ]}
               />
@@ -128,13 +128,13 @@ export default function SetupGuide() {
             </div>
             <div className="flex-1">
               <h2 className="font-semibold mb-2 flex items-center gap-2">
-                <Terminal className="h-4 w-4 text-sky-500" /> Kiểm tra cấu hình
+                <Terminal className="h-4 w-4 text-sky-500" /> Verify configuration
               </h2>
               <p className="text-sm text-muted-foreground">
-                DNS propagation có thể mất đến 24h nhưng thường chỉ vài phút. Quay lại tab <strong className="text-foreground">Domains</strong> và nhấn <strong className="text-foreground">"DNS"</strong> để xác nhận MX record đã được nhận diện đúng.
+                DNS propagation can take up to 24h but usually only a few minutes. Return to the <strong className="text-foreground">Domains</strong> tab and click <strong className="text-foreground">&quot;DNS&quot;</strong> to confirm the MX record is recognized correctly.
               </p>
               <div className="mt-3 p-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs text-muted-foreground">
-                # Kiểm tra thủ công qua terminal:<br />
+                # Manually verify via terminal:<br />
                 $ dig MX yourdomain.com +short<br />
                 10 {mailDomain}.
               </div>

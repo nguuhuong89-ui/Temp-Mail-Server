@@ -58,21 +58,21 @@ export default function AdminInboxes() {
     mutationFn: (body: object) => apiFetch("/api/inboxes/bulk", { method: "DELETE", body: JSON.stringify(body) }),
     onSuccess: (res: unknown) => {
       const r = res as { deleted: number };
-      toast({ title: `Đã xóa ${r.deleted} inbox` });
+      toast({ title: `Deleted ${r.deleted} inbox(es)` });
       setSelected(new Set()); setConfirmOpen(false);
       void qc.invalidateQueries({ queryKey: ["admin-inboxes"] });
     },
-    onError: () => toast({ title: "Xóa thất bại", variant: "destructive" }),
+    onError: () => toast({ title: "Delete failed", variant: "destructive" }),
   });
 
   const purgeExpiredMut = useMutation({
     mutationFn: () => apiFetch("/api/inboxes/purge-expired", { method: "POST" }),
     onSuccess: (res: unknown) => {
       const r = res as { purged: number };
-      toast({ title: `Đã xóa ${r.purged} inbox hết hạn` });
+      toast({ title: `Purged ${r.purged} expired inbox(es)` });
       void qc.invalidateQueries({ queryKey: ["admin-inboxes"] });
     },
-    onError: () => toast({ title: "Purge thất bại", variant: "destructive" }),
+    onError: () => toast({ title: "Purge failed", variant: "destructive" }),
   });
 
   const toggleSelect = (addr: string) => {
@@ -100,16 +100,16 @@ export default function AdminInboxes() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Inboxes</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Quản lý toàn bộ inbox — tổng: <strong>{total.toLocaleString()}</strong></p>
+            <p className="text-muted-foreground text-sm mt-0.5">Manage all inboxes — total: <strong>{total.toLocaleString()}</strong></p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30"
               onClick={() => openConfirm("expired")} disabled={deleteMut.isPending}>
-              <Clock className="h-3.5 w-3.5" /> Xóa hết hạn
+              <Clock className="h-3.5 w-3.5" /> Delete Expired
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50 dark:hover:bg-violet-950/30"
               onClick={() => openConfirm("anon")} disabled={deleteMut.isPending}>
-              <Ghost className="h-3.5 w-3.5" /> Xóa anonymous
+              <Ghost className="h-3.5 w-3.5" /> Delete Anonymous
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5"
               onClick={() => void qc.invalidateQueries({ queryKey: ["admin-inboxes"] })} disabled={isFetching}>
@@ -122,23 +122,23 @@ export default function AdminInboxes() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Tìm địa chỉ email..." className="pl-9" value={search}
+            <Input placeholder="Search email address..." className="pl-9" value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
           </div>
           <Select value={type} onValueChange={(v) => { setType(v); setPage(1); }}>
-            <SelectTrigger><SelectValue placeholder="Loại inbox" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Inbox type" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả loại</SelectItem>
-              <SelectItem value="anon">Anonymous (không đăng ký)</SelectItem>
-              <SelectItem value="owned">Có chủ (đã đăng nhập)</SelectItem>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="anon">Anonymous (unregistered)</SelectItem>
+              <SelectItem value="owned">Owned (logged in)</SelectItem>
             </SelectContent>
           </Select>
           <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-            <SelectTrigger><SelectValue placeholder="Trạng thái" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả trạng thái</SelectItem>
-              <SelectItem value="active">Còn hiệu lực</SelectItem>
-              <SelectItem value="expired">Đã hết hạn</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -147,11 +147,11 @@ export default function AdminInboxes() {
         {selected.size > 0 && (
           <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">
             <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-              Đã chọn <strong>{selected.size}</strong> inbox
+              Selected <strong>{selected.size}</strong> inbox(es)
             </span>
             <Button size="sm" variant="destructive" className="ml-auto h-7 px-3 text-xs gap-1.5"
               onClick={() => openConfirm("selected")} disabled={deleteMut.isPending}>
-              <Trash2 className="h-3 w-3" /> Xóa đã chọn ({selected.size})
+              <Trash2 className="h-3 w-3" /> Delete Selected ({selected.size})
             </Button>
           </div>
         )}
@@ -162,16 +162,16 @@ export default function AdminInboxes() {
             <button onClick={toggleAll} className="flex items-center justify-center hover:text-foreground">
               {allSelected ? <CheckSquare className="h-4 w-4 text-indigo-500" /> : <Square className="h-4 w-4" />}
             </button>
-            <span>Address</span><span>Owner</span><span>Emails</span><span>Hết hạn</span><span>Status</span>
+            <span>Address</span><span>Owner</span><span>Emails</span><span>Expires</span><span>Status</span>
           </div>
 
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
-              <RefreshCw className="h-6 w-6 animate-spin mr-2" /><span className="text-sm">Đang tải...</span>
+              <RefreshCw className="h-6 w-6 animate-spin mr-2" /><span className="text-sm">Loading...</span>
             </div>
           ) : inboxes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-              <Inbox className="h-10 w-10 opacity-20" /><p className="text-sm">Không tìm thấy inbox nào.</p>
+              <Inbox className="h-10 w-10 opacity-20" /><p className="text-sm">No inboxes found.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -227,20 +227,20 @@ export default function AdminInboxes() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-rose-500" /> Xác nhận xóa inbox
+              <AlertTriangle className="h-4 w-4 text-rose-500" /> Confirm Delete
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-1">
             <p className="text-sm text-muted-foreground">
-              {confirmMode === "selected" && <>Xóa <strong>{selected.size} inbox</strong> đã chọn và toàn bộ email bên trong.</>}
-              {confirmMode === "expired" && <><strong>Xóa tất cả inbox hết hạn</strong> và email của chúng. Không thể hoàn tác!</>}
-              {confirmMode === "anon" && <><strong>Xóa tất cả inbox anonymous</strong> (không có chủ sở hữu) và email của chúng. Không thể hoàn tác!</>}
+              {confirmMode === "selected" && <>Delete <strong>{selected.size} inbox(es)</strong> and all emails inside.</>}
+              {confirmMode === "expired" && <><strong>Delete all expired inboxes</strong> and their emails. This cannot be undone!</>}
+              {confirmMode === "anon" && <><strong>Delete all anonymous inboxes</strong> (no owner) and their emails. This cannot be undone!</>}
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setConfirmOpen(false)}>Hủy</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setConfirmOpen(false)}>Cancel</Button>
               <Button variant="destructive" className="flex-1 gap-1.5" onClick={doDelete} disabled={deleteMut.isPending}>
                 {deleteMut.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                Xóa ngay
+                Delete Now
               </Button>
             </div>
           </div>
