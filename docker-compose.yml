@@ -1,14 +1,17 @@
 services:
   # ---------------------------------------------------------------
-  # PostgreSQL — bundled database (skip if using an external DB)
-  # Set DATABASE_URL in .env to use an external Postgres instead.
+  # PostgreSQL — bundled database (for local/self-host without Coolify)
+  # Only starts when using: docker compose --profile local up
+  # When deploying on Coolify: set DATABASE_URL env var directly,
+  # this service will NOT start (profiles: [local] won't be activated).
   # ---------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
+    profiles: [local]
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-tempmail}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tempmail}
       POSTGRES_DB: ${POSTGRES_DB:-tempmail}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -28,22 +31,20 @@ services:
       context: .
       target: api
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       # --- Database ---
-      # Override with an external DATABASE_URL if not using bundled postgres
-      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-tempmail}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tempmail}}
+      # On Coolify: set DATABASE_URL in the environment variables panel.
+      # For local with bundled postgres: leave as-is (uses postgres service above).
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-tempmail}:${POSTGRES_PASSWORD:-tempmail}@postgres:5432/${POSTGRES_DB:-tempmail}}
       # --- Server ---
       PORT: "8080"
       NODE_ENV: production
       # --- SMTP: set to 0 to disable the embedded SMTP listener ---
       SMTP_PORT: ${SMTP_PORT:-25}
       # --- Mail domain (must match your MX record) ---
-      MAIL_DOMAIN: ${MAIL_DOMAIN:?MAIL_DOMAIN is required}
+      MAIL_DOMAIN: ${MAIL_DOMAIN:-mail.example.com}
       # --- Admin panel token (required — use: openssl rand -hex 32) ---
-      ADMIN_TOKEN: ${ADMIN_TOKEN:?ADMIN_TOKEN is required}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-change_me}
       # --- Clerk user accounts (optional — leave empty to disable) ---
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
@@ -75,8 +76,8 @@ services:
     restart: unless-stopped
     depends_on:
       - api
-    ports:
-      - "${HTTP_PORT:-80}:80"
+    expose:
+      - "80"
     networks:
       - default
       - coolify
@@ -87,6 +88,3 @@ volumes:
 networks:
   coolify:
     external: true
-    # If not using Coolify, comment out the block above and use:
-    # coolify:
-    #   driver: bridge
