@@ -31,7 +31,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-0.5 text-sm">
             {[
-              { href: "/admin/api-docs", icon: BookOpen, label: t("nav.apiDocs") },
+              { href: "/docs", icon: BookOpen, label: t("nav.apiDocs") },
               { href: "/acceptable-use", icon: ShieldCheck, label: t("nav.acceptableUse") },
               { href: "/abuse", icon: AlertTriangle, label: t("nav.abuse") },
             ].map(({ href, icon: Icon, label }) => (
@@ -94,7 +94,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile nav */}
         <div className="md:hidden border-t border-white/10 flex overflow-x-auto gap-1 px-2 py-1.5">
-          <Link href="/admin/api-docs">
+          <Link href="/docs">
             <Button variant="ghost" size="sm" className="gap-1 h-7 px-2 text-xs whitespace-nowrap text-white/70 hover:text-white hover:bg-white/10">
               <BookOpen className="h-3 w-3" /> {t("nav.apiDocs")}
             </Button>
@@ -123,6 +123,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         <div className="container max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 px-4 text-xs text-white/50">
           <p>© {new Date().getFullYear()} TempMail — {t("footer.tagline")}</p>
           <nav className="flex items-center gap-4">
+            <Link href="/docs" className="hover:text-white/80 transition-colors">{t("nav.apiDocs")}</Link>
             <Link href="/acceptable-use" className="hover:text-white/80 transition-colors">{t("nav.policyLink")}</Link>
             <Link href="/abuse" className="hover:text-white/80 transition-colors">{t("nav.abuseLink")}</Link>
             <a href="mailto:contact@tempmail.local" className="hover:text-white/80 transition-colors">{t("nav.contact")}</a>

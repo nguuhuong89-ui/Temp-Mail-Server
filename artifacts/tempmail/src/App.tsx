@@ -28,6 +28,7 @@ import AdminUsers from "@/pages/admin/users";
 import SetupGuide from "@/pages/admin/setup";
 import AdminInboxes from "@/pages/admin/inboxes";
 import AdminSettings from "@/pages/admin/settings";
+import DocsPage from "@/pages/docs";
 import AcceptableUsePage from "@/pages/acceptable-use";
 import AbusePage from "@/pages/abuse";
 
@@ -105,6 +106,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/inbox/:address" component={Home} />
       <Route path="/email/:id" component={EmailView} />
+      <Route path="/docs" component={DocsPage} />
       <Route path="/acceptable-use" component={AcceptableUsePage} />
       <Route path="/abuse" component={AbusePage} />
 
