@@ -2,7 +2,13 @@ type Entry<V> = { value: V; expiresAt: number };
 
 export class TtlCache<K, V> {
   private map = new Map<K, Entry<V>>();
-  constructor(private ttlMs: number) {}
+  private pruneTimer: ReturnType<typeof setInterval>;
+
+  constructor(private ttlMs: number) {
+    // Periodically prune expired entries to avoid unbounded memory growth.
+    this.pruneTimer = setInterval(() => this.prune(), Math.max(ttlMs * 2, 60_000));
+    if (this.pruneTimer.unref) this.pruneTimer.unref();
+  }
 
   get(key: K): V | undefined {
     const e = this.map.get(key);
@@ -21,6 +27,13 @@ export class TtlCache<K, V> {
   invalidate(key?: K): void {
     if (key === undefined) this.map.clear();
     else this.map.delete(key);
+  }
+
+  private prune(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.map) {
+      if (entry.expiresAt < now) this.map.delete(key);
+    }
   }
 }
 

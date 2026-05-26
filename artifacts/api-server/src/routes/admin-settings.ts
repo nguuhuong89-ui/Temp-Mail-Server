@@ -33,9 +33,9 @@ router.get("/system-settings/purge-preview", async (_req, res) => {
     db.execute(sql`SELECT count(*)::int AS count FROM inboxes WHERE expires_at < now()`),
   ]);
   res.json({
-    anonEmailsToDelete: Number((anonRow as unknown as Array<{ count: number }>)[0]?.count ?? 0),
-    allOldEmailsToDelete: Number((allRow as unknown as Array<{ count: number }>)[0]?.count ?? 0),
-    expiredInboxesToDelete: Number((expiredRow as unknown as Array<{ count: number }>)[0]?.count ?? 0),
+    anonEmailsToDelete: Number((anonRow.rows as Array<{ count: number }>)[0]?.count ?? 0),
+    allOldEmailsToDelete: Number((allRow.rows as Array<{ count: number }>)[0]?.count ?? 0),
+    expiredInboxesToDelete: Number((expiredRow.rows as Array<{ count: number }>)[0]?.count ?? 0),
     anonCutoff: anonCutoff.toISOString(),
     allCutoff: allCutoff.toISOString(),
   });
@@ -48,13 +48,13 @@ router.post("/system-settings/purge-anon", async (_req, res) => {
     WHERE received_at < ${cutoff}
     AND to_address IN (SELECT address FROM inboxes WHERE owner_user_id IS NULL)
   `);
-  res.json({ deleted: (result as unknown as { rowCount: number }).rowCount ?? 0, cutoff: cutoff.toISOString() });
+  res.json({ deleted: result.rowCount ?? 0, cutoff: cutoff.toISOString() });
 });
 
 router.post("/system-settings/purge-old", async (_req, res) => {
   const cutoff = new Date(Date.now() - runtimeSettings.emailRetentionDays * 24 * 60 * 60 * 1000);
   const result = await db.execute(sql`DELETE FROM emails WHERE received_at < ${cutoff}`);
-  res.json({ deleted: (result as unknown as { rowCount: number }).rowCount ?? 0, cutoff: cutoff.toISOString() });
+  res.json({ deleted: result.rowCount ?? 0, cutoff: cutoff.toISOString() });
 });
 
 export default router;

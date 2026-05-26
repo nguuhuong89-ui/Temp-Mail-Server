@@ -92,7 +92,6 @@ router.post("/inbox/custom", async (req: Request, res: Response) => {
     res.status(403).json({ error: "Domain not available" });
     return;
   }
-  void lookupDomain;
   const address = `${localPart}@${domain.name}`.toLowerCase();
   const token = generateToken();
   const expiresAt = defaultExpiry();
@@ -174,7 +173,21 @@ router.get("/inbox/:address", async (req, res) => {
       })
       .onConflictDoNothing()
       .returning();
-    inbox = created!;
+    if (!created) {
+      // Race: another request created the inbox between our SELECT and INSERT.
+      const [existing] = await db
+        .select()
+        .from(inboxesTable)
+        .where(eq(inboxesTable.address, address))
+        .limit(1);
+      if (!existing) {
+        res.status(404).json({ error: "Inbox not found" });
+        return;
+      }
+      inbox = existing;
+    } else {
+      inbox = created;
+    }
   }
   res.json({
     address: inbox.address,

@@ -73,11 +73,15 @@ app.use("/api/inbox/custom", inboxLimiter);
 app.use("/api", authRouter);
 app.use("/api", router);
 
-// Error handler — returns JSON so DB errors are visible during diagnostics
+// Error handler — returns JSON; hides internal details in production.
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const message = err instanceof Error ? err.message : String(err);
   logger.error({ err }, "Unhandled request error");
-  res.status(500).json({ error: "Internal server error", detail: message });
+  const isProduction = process.env.NODE_ENV === "production";
+  res.status(500).json({
+    error: "Internal server error",
+    ...(isProduction ? {} : { detail: message }),
+  });
 });
 
 export default app;

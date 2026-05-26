@@ -43,42 +43,8 @@ router.get("/emails", async (req, res) => {
   );
 });
 
-router.get("/emails/:id", async (req, res) => {
-  const id = Number(req.params["id"]);
-  if (Number.isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
-  const [row] = await db
-    .select()
-    .from(emailsTable)
-    .where(eq(emailsTable.id, id))
-    .limit(1);
-  if (!row) {
-    res.status(404).json({ error: "Email not found" });
-    return;
-  }
-  res.json({
-    id: row.id,
-    toAddress: row.toAddress,
-    fromAddress: row.fromAddress,
-    subject: row.subject,
-    textBody: row.textBody,
-    htmlBody: row.htmlBody,
-    hasAttachments: row.hasAttachments,
-    receivedAt: row.receivedAt.toISOString(),
-  });
-});
-
-router.delete("/emails/:id", async (req, res) => {
-  const id = Number(req.params["id"]);
-  if (Number.isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
-  await db.delete(emailsTable).where(eq(emailsTable.id, id));
-  res.status(204).end();
-});
+// Static paths must be registered before parameterized /:id routes,
+// otherwise Express matches "paginated" / "bulk" as an :id value.
 
 router.get("/emails/paginated", async (req, res) => {
   const page = Math.max(1, Number(req.query["page"] ?? 1) || 1);
@@ -156,6 +122,43 @@ router.delete("/emails/bulk", async (req, res) => {
   const where = and(...conditions);
   const result = await db.delete(emailsTable).where(where).returning({ id: emailsTable.id });
   res.json({ deleted: result.length });
+});
+
+router.get("/emails/:id", async (req, res) => {
+  const id = Number(req.params["id"]);
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const [row] = await db
+    .select()
+    .from(emailsTable)
+    .where(eq(emailsTable.id, id))
+    .limit(1);
+  if (!row) {
+    res.status(404).json({ error: "Email not found" });
+    return;
+  }
+  res.json({
+    id: row.id,
+    toAddress: row.toAddress,
+    fromAddress: row.fromAddress,
+    subject: row.subject,
+    textBody: row.textBody,
+    htmlBody: row.htmlBody,
+    hasAttachments: row.hasAttachments,
+    receivedAt: row.receivedAt.toISOString(),
+  });
+});
+
+router.delete("/emails/:id", async (req, res) => {
+  const id = Number(req.params["id"]);
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  await db.delete(emailsTable).where(eq(emailsTable.id, id));
+  res.status(204).end();
 });
 
 export default router;

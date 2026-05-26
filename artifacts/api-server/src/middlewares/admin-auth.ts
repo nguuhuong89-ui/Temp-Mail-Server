@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 
 export function isAdminAuthConfigured(): boolean {
@@ -14,7 +15,12 @@ function insecureAdminAllowed(): boolean {
 export function checkAdminToken(provided: string | undefined): boolean {
   const expected = process.env["ADMIN_TOKEN"];
   if (!expected) return insecureAdminAllowed();
-  return Boolean(provided) && provided === expected;
+  if (!provided) return false;
+  if (provided.length !== expected.length) return false;
+  return crypto.timingSafeEqual(
+    Buffer.from(provided, "utf8"),
+    Buffer.from(expected, "utf8"),
+  );
 }
 
 export function assertProductionAdminConfig(): void {

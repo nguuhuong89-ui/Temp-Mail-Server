@@ -39,6 +39,7 @@ function extractKey(req: Request): string | null {
   return null;
 }
 
+const MAX_DEBOUNCE_ENTRIES = 10_000;
 const lastUsedDebounce = new Map<number, number>();
 const LAST_USED_INTERVAL_MS = 60_000;
 
@@ -63,6 +64,15 @@ export async function apiKeyAuth(req: Request, res: Response, next: NextFunction
   const now = Date.now();
   const last = lastUsedDebounce.get(row.id) ?? 0;
   if (now - last > LAST_USED_INTERVAL_MS) {
+    if (lastUsedDebounce.size >= MAX_DEBOUNCE_ENTRIES) {
+      // Evict oldest entries when the map grows too large.
+      let oldest = Infinity;
+      let oldestKey: number | undefined;
+      for (const [k, v] of lastUsedDebounce) {
+        if (v < oldest) { oldest = v; oldestKey = k; }
+      }
+      if (oldestKey !== undefined) lastUsedDebounce.delete(oldestKey);
+    }
     lastUsedDebounce.set(row.id, now);
     db.update(apiKeysTable)
       .set({ lastUsedAt: new Date() })

@@ -91,7 +91,7 @@ router.post("/users/sync", async (_req, res) => {
       const plan = role === "admin" ? "pro" : "free";
 
       const existing = await db
-        .select({ id: usersTable.id, plan: usersTable.plan, role: usersTable.role })
+        .select({ id: usersTable.id, email: usersTable.email, plan: usersTable.plan, role: usersTable.role })
         .from(usersTable)
         .where(eq(usersTable.id, u.id))
         .limit(1);
@@ -103,7 +103,7 @@ router.post("/users/sync", async (_req, res) => {
         // Only update email if missing; preserve manually-set plan/role
         const cur = existing[0]!;
         const patch: Record<string, unknown> = { updatedAt: new Date() };
-        if (email && !cur) patch["email"] = email;
+        if (email && !cur.email) patch["email"] = email;
         // Promote to admin if in ADMIN_EMAILS and not already admin
         if (role === "admin" && cur.role !== "admin") {
           patch["role"] = "admin";
