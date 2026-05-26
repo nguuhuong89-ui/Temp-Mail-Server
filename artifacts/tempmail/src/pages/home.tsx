@@ -267,7 +267,7 @@ export default function Home() {
 
   // Auto-select first domain when list loads
   useEffect(() => {
-    if (publicDomains && publicDomains.length > 0 && !customDomainId) {
+    if (Array.isArray(publicDomains) && publicDomains.length > 0 && !customDomainId) {
       setCustomDomainId(String(publicDomains[0].id));
     }
   }, [publicDomains, customDomainId]);
@@ -330,7 +330,7 @@ export default function Home() {
   };
 
   // Derived: selected domain name for preview
-  const customDomain = publicDomains?.find((d) => String(d.id) === customDomainId);
+  const customDomain = Array.isArray(publicDomains) ? publicDomains.find((d) => String(d.id) === customDomainId) : undefined;
   const customPreview = customUsername && customDomain
     ? `${customUsername.trim().toLowerCase()}@${customDomain.name}`
     : null;
@@ -564,7 +564,7 @@ export default function Home() {
                 size="sm"
                 className="bg-emerald-500 hover:bg-emerald-400 text-white border-0 shadow-sm shadow-emerald-500/30 font-semibold"
                 onClick={() => {
-                  if (publicDomains && publicDomains.length > 0 && !customDomainId) {
+                  if (Array.isArray(publicDomains) && publicDomains.length > 0 && !customDomainId) {
                     setCustomDomainId(String(publicDomains[0].id));
                   }
                   setCustomDialogOpen(true);
@@ -894,7 +894,7 @@ export default function Home() {
             </div>
             <div className="space-y-2">
               <Label>Domain</Label>
-              {publicDomains && publicDomains.length > 0 ? (
+              {Array.isArray(publicDomains) && publicDomains.length > 0 ? (
                 <Select value={customDomainId} onValueChange={setCustomDomainId}>
                   <SelectTrigger>
                     <SelectValue placeholder={t("home.selectDomain")} />

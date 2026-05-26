@@ -42,7 +42,7 @@ function EmbedAd({ code }: { code: string }) {
 export function AdRenderer({ placement }: { placement: "header" | "sidebar" | "inbox_top" | "email_body" }) {
   const { data: ads } = useGetActiveAds();
 
-  if (!ads) return null;
+  if (!ads || !Array.isArray(ads)) return null;
 
   const relevantAds = ads.filter(ad => ad.placement === placement);
   if (relevantAds.length === 0) return null;
