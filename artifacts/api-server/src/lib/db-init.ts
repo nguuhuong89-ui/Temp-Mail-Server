@@ -48,14 +48,22 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS emails_from_idx        ON emails (from_address);
 
     CREATE TABLE IF NOT EXISTS users (
-      id         TEXT PRIMARY KEY,
-      email      TEXT,
-      plan       TEXT NOT NULL DEFAULT 'free',
-      role       TEXT NOT NULL DEFAULT 'user',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      id           TEXT PRIMARY KEY,
+      email        TEXT,
+      display_name TEXT,
+      avatar_url   TEXT,
+      plan         TEXT NOT NULL DEFAULT 'free',
+      role         TEXT NOT NULL DEFAULT 'user',
+      last_login_at TIMESTAMPTZ,
+      deleted_at   TIMESTAMPTZ,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS users_plan_idx ON users (plan);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url   TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at   TIMESTAMPTZ;
 
     CREATE TABLE IF NOT EXISTS ads (
       id          SERIAL PRIMARY KEY,
@@ -90,5 +98,32 @@ export async function initDb(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS blocklist_type_idx ON blocklist (type);
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id          SERIAL PRIMARY KEY,
+      action      TEXT NOT NULL,
+      actor_id    TEXT NOT NULL,
+      target_type TEXT,
+      target_id   TEXT,
+      metadata    JSONB,
+      ip_address  TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS audit_logs_action_idx  ON audit_logs (action);
+    CREATE INDEX IF NOT EXISTS audit_logs_actor_idx   ON audit_logs (actor_id);
+    CREATE INDEX IF NOT EXISTS audit_logs_created_idx ON audit_logs (created_at);
+
+    CREATE TABLE IF NOT EXISTS webhooks (
+      id                SERIAL PRIMARY KEY,
+      user_id           TEXT NOT NULL,
+      url               TEXT NOT NULL,
+      events            TEXT NOT NULL DEFAULT 'new_email',
+      secret            TEXT NOT NULL,
+      is_active         BOOLEAN NOT NULL DEFAULT TRUE,
+      last_triggered_at TIMESTAMPTZ,
+      fail_count        TEXT NOT NULL DEFAULT '0',
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS webhooks_user_idx ON webhooks (user_id);
   `);
 }
