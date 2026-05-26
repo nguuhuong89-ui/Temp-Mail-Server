@@ -1,9 +1,11 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, apiKeysTable, inboxesTable, domainsTable, emailsTable } from "@workspace/db";
+import { db, usersTable, apiKeysTable, inboxesTable, domainsTable, emailsTable, auditLogsTable } from "@workspace/db";
 import { eq, sql, desc, inArray } from "drizzle-orm";
 import { createClerkClient } from "@clerk/express";
 import { invalidateUserCache } from "../middlewares/clerk-auth";
 import { invalidateDomainCache } from "../lib/domain-cache";
+import { logAudit } from "../lib/audit";
+import type { AuthedRequest } from "../middlewares/clerk-auth";
 
 const clerkClient = createClerkClient({
   secretKey: process.env["CLERK_SECRET_KEY"] ?? "",
@@ -37,6 +39,7 @@ router.get("/users", async (_req, res) => {
 });
 
 router.patch("/users/:id", async (req, res) => {
+  const r = req as AuthedRequest;
   const id = String(req.params["id"]);
   const { plan, role } = req.body ?? {};
   const patch: Record<string, unknown> = { updatedAt: new Date() };
@@ -58,6 +61,7 @@ router.patch("/users/:id", async (req, res) => {
   if (!row) { res.status(404).json({ error: "User not found" }); return; }
   invalidateUserCache(id);
   if (patch["plan"] === "free") invalidateDomainCache();
+  await logAudit({ action: "user.update", actorId: r.userId ?? "admin", targetType: "user", targetId: id, metadata: { plan: row.plan, role: row.role }, req });
   res.json({
     id: row.id,
     email: row.email,
@@ -167,6 +171,7 @@ router.post("/users/promote", async (req, res) => {
 
 // DELETE /users/:id — remove user + all their data
 router.delete("/users/:id", async (req, res) => {
+  const r = req as AuthedRequest;
   const id = String(req.params["id"]);
 
   // Get all inboxes owned by this user
@@ -188,7 +193,115 @@ router.delete("/users/:id", async (req, res) => {
   if (!deleted) { res.status(404).json({ error: "User not found" }); return; }
   invalidateUserCache(id);
   invalidateDomainCache();
+  await logAudit({ action: "user.delete", actorId: r.userId ?? "admin", targetType: "user", targetId: id, metadata: { email: deleted.email }, req });
   res.json({ ok: true, deleted: id });
+});
+
+// GET /users/:id/detail — full user detail view for admin
+router.get("/users/:id/detail", async (req, res) => {
+  const id = String(req.params["id"]);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  const [userInboxes, userDomains, userApiKeys, recentEmails, recentAudit] = await Promise.all([
+    db
+      .select({
+        id: inboxesTable.id,
+        address: inboxesTable.address,
+        createdAt: inboxesTable.createdAt,
+        expiresAt: inboxesTable.expiresAt,
+        emailCount: sql<number>`(SELECT count(*)::int FROM emails WHERE to_address = ${inboxesTable.address})`,
+      })
+      .from(inboxesTable)
+      .where(eq(inboxesTable.ownerUserId, id))
+      .orderBy(desc(inboxesTable.createdAt))
+      .limit(50),
+    db
+      .select({
+        id: domainsTable.id,
+        name: domainsTable.name,
+        status: domainsTable.status,
+        createdAt: domainsTable.createdAt,
+      })
+      .from(domainsTable)
+      .where(eq(domainsTable.userId, id))
+      .orderBy(desc(domainsTable.createdAt)),
+    db
+      .select({
+        id: apiKeysTable.id,
+        name: apiKeysTable.name,
+        prefix: apiKeysTable.prefix,
+        createdAt: apiKeysTable.createdAt,
+        lastUsedAt: apiKeysTable.lastUsedAt,
+        revokedAt: apiKeysTable.revokedAt,
+      })
+      .from(apiKeysTable)
+      .where(eq(apiKeysTable.userId, id))
+      .orderBy(desc(apiKeysTable.createdAt)),
+    db
+      .select({
+        id: emailsTable.id,
+        toAddress: emailsTable.toAddress,
+        fromAddress: emailsTable.fromAddress,
+        subject: emailsTable.subject,
+        receivedAt: emailsTable.receivedAt,
+      })
+      .from(emailsTable)
+      .where(sql`${emailsTable.toAddress} IN (SELECT address FROM inboxes WHERE owner_user_id = ${id})`)
+      .orderBy(desc(emailsTable.receivedAt))
+      .limit(20),
+    db
+      .select({
+        id: auditLogsTable.id,
+        action: auditLogsTable.action,
+        targetType: auditLogsTable.targetType,
+        targetId: auditLogsTable.targetId,
+        createdAt: auditLogsTable.createdAt,
+      })
+      .from(auditLogsTable)
+      .where(eq(auditLogsTable.actorId, id))
+      .orderBy(desc(auditLogsTable.createdAt))
+      .limit(20),
+  ]);
+
+  res.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      plan: user.plan,
+      role: user.role,
+      lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      deletedAt: user.deletedAt?.toISOString() ?? null,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    },
+    inboxes: userInboxes.map((i) => ({
+      ...i,
+      emailCount: Number(i.emailCount ?? 0),
+      createdAt: i.createdAt.toISOString(),
+      expiresAt: i.expiresAt.toISOString(),
+    })),
+    domains: userDomains.map((d) => ({
+      ...d,
+      createdAt: d.createdAt.toISOString(),
+    })),
+    apiKeys: userApiKeys.map((k) => ({
+      ...k,
+      createdAt: k.createdAt.toISOString(),
+      lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
+      revokedAt: k.revokedAt?.toISOString() ?? null,
+    })),
+    recentEmails: recentEmails.map((e) => ({
+      ...e,
+      receivedAt: e.receivedAt.toISOString(),
+    })),
+    recentAudit: recentAudit.map((a) => ({
+      ...a,
+      createdAt: a.createdAt.toISOString(),
+    })),
+  });
 });
 
 export default router;

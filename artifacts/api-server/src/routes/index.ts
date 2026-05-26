@@ -12,6 +12,7 @@ import accountRouter from "./account";
 import adminUsersRouter from "./admin-users";
 import adminInboxesRouter from "./admin-inboxes";
 import adminSettingsRouter from "./admin-settings";
+import adminAuditRouter from "./admin-audit";
 import publicRouter from "./public";
 import { adminAuth } from "../middlewares/admin-auth";
 import { attachUser } from "../middlewares/clerk-auth";
@@ -41,5 +42,6 @@ router.use(blocklistRouter);
 router.use(apiKeysRouter);
 router.use(adminInboxesRouter);
 router.use(adminSettingsRouter);
+router.use(adminAuditRouter);
 
 export default router;

@@ -28,6 +28,8 @@ import AdminUsers from "@/pages/admin/users";
 import SetupGuide from "@/pages/admin/setup";
 import AdminInboxes from "@/pages/admin/inboxes";
 import AdminSettings from "@/pages/admin/settings";
+import AdminAuditLogs from "@/pages/admin/audit-logs";
+import AccountProfile from "@/pages/account/profile";
 import DocsPage from "@/pages/docs";
 import AcceptableUsePage from "@/pages/acceptable-use";
 import AbusePage from "@/pages/abuse";
@@ -114,6 +116,7 @@ function Router() {
       <Route path="/sign-up/*?" component={SignUpPage} />
 
       <Route path="/account" component={AccountHome} />
+      <Route path="/account/profile" component={AccountProfile} />
       <Route path="/account/inboxes" component={AccountInboxes} />
       <Route path="/account/api-keys" component={AccountApiKeys} />
       <Route path="/account/domains" component={AccountDomains} />
@@ -130,6 +133,7 @@ function Router() {
       <Route path="/admin/setup" component={SetupGuide} />
       <Route path="/admin/inboxes" component={AdminInboxes} />
       <Route path="/admin/settings" component={AdminSettings} />
+      <Route path="/admin/audit-logs" component={AdminAuditLogs} />
 
       <Route component={NotFound} />
     </Switch>

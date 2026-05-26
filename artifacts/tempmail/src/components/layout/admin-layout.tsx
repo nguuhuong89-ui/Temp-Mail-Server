@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Inbox,
   SlidersHorizontal,
+  ScrollText,
 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { AdminGate, AdminLogoutButton } from "@/components/admin-gate";
@@ -33,6 +34,7 @@ const NAV = [
   { href: "/admin/api-docs", label: "API Docs", icon: Code2 },
   { href: "/admin/setup", label: "Setup Guide", icon: Settings },
   { href: "/admin/settings", label: "Settings", icon: SlidersHorizontal },
+  { href: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

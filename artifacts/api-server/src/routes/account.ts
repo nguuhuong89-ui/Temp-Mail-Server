@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, apiKeysTable, inboxesTable, domainsTable, emailsTable, usersTable } from "@workspace/db";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { db, apiKeysTable, inboxesTable, domainsTable, emailsTable, usersTable, auditLogsTable } from "@workspace/db";
+import { and, eq, desc, sql, isNull } from "drizzle-orm";
 import { generateApiKey } from "../lib/api-key-auth";
 import { generateDomainToken, verifyDomainTxt, verifyRecordValue } from "../lib/domain-verify";
 import { invalidateDomainCache } from "../lib/domain-cache";
@@ -22,7 +22,70 @@ router.get("/account/me", requireUser, async (req, res) => {
     plan: r.userPlan,
     role: r.userRole,
     email: u?.email ?? null,
+    displayName: u?.displayName ?? null,
+    avatarUrl: u?.avatarUrl ?? null,
+    lastLoginAt: u?.lastLoginAt?.toISOString() ?? null,
     createdAt: u?.createdAt?.toISOString() ?? null,
+  });
+});
+
+router.patch("/account/me", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const { displayName, avatarUrl } = req.body ?? {};
+  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  if (typeof displayName === "string") patch["displayName"] = displayName.trim().slice(0, 100) || null;
+  if (typeof avatarUrl === "string") patch["avatarUrl"] = avatarUrl.trim().slice(0, 500) || null;
+  if (Object.keys(patch).length === 1) {
+    res.status(400).json({ error: "Nothing to update" });
+    return;
+  }
+  const [row] = await db
+    .update(usersTable)
+    .set(patch)
+    .where(eq(usersTable.id, r.userId!))
+    .returning();
+  if (!row) { res.status(404).json({ error: "User not found" }); return; }
+  res.json({
+    id: row.id,
+    displayName: row.displayName,
+    avatarUrl: row.avatarUrl,
+    updatedAt: row.updatedAt.toISOString(),
+  });
+});
+
+router.delete("/account/me", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const [row] = await db
+    .update(usersTable)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(usersTable.id, r.userId!), isNull(usersTable.deletedAt)))
+    .returning();
+  if (!row) { res.status(404).json({ error: "User not found or already deleted" }); return; }
+  await db.insert(auditLogsTable).values({
+    action: "account.self_delete",
+    actorId: r.userId!,
+    targetType: "user",
+    targetId: r.userId!,
+    ipAddress: req.ip ?? null,
+  });
+  res.json({ ok: true, deletedAt: row.deletedAt?.toISOString() });
+});
+
+// === Usage stats ===
+router.get("/account/usage", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const [[inboxRow], [emailRow], [domainRow], [apiKeyRow]] = await Promise.all([
+    db.select({ count: sql<number>`count(*)::int` }).from(inboxesTable).where(eq(inboxesTable.ownerUserId, r.userId!)),
+    db.select({ count: sql<number>`count(*)::int` }).from(emailsTable)
+      .where(sql`${emailsTable.toAddress} IN (SELECT address FROM inboxes WHERE owner_user_id = ${r.userId})`),
+    db.select({ count: sql<number>`count(*)::int` }).from(domainsTable).where(eq(domainsTable.userId, r.userId!)),
+    db.select({ count: sql<number>`count(*)::int` }).from(apiKeysTable).where(eq(apiKeysTable.userId, r.userId!)),
+  ]);
+  res.json({
+    inboxCount: Number(inboxRow?.count ?? 0),
+    emailCount: Number(emailRow?.count ?? 0),
+    domainCount: Number(domainRow?.count ?? 0),
+    apiKeyCount: Number(apiKeyRow?.count ?? 0),
   });
 });
 

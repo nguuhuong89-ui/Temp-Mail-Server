@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Crown, RefreshCw, ShieldOff, Users, Inbox, Key, Globe, Search, Trash2, UserPlus, ArrowUpCircle, ArrowDownCircle, Shield, X } from "lucide-react";
+import { Crown, RefreshCw, ShieldOff, Users, Inbox, Key, Globe, Search, Trash2, UserPlus, ArrowUpCircle, ArrowDownCircle, Shield, X, Mail, ScrollText } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type AdminUser = {
   id: string;
@@ -21,6 +22,26 @@ type AdminUser = {
   apiKeyCount: number;
   inboxCount: number;
   domainCount: number;
+};
+
+type UserDetail = {
+  user: {
+    id: string;
+    email: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    plan: string;
+    role: string;
+    lastLoginAt: string | null;
+    deletedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  inboxes: Array<{ id: number; address: string; createdAt: string; expiresAt: string; emailCount: number }>;
+  domains: Array<{ id: number; name: string; status: string; createdAt: string }>;
+  apiKeys: Array<{ id: number; name: string; prefix: string; createdAt: string; lastUsedAt: string | null; revokedAt: string | null }>;
+  recentEmails: Array<{ id: number; toAddress: string; fromAddress: string; subject: string; receivedAt: string }>;
+  recentAudit: Array<{ id: number; action: string; targetType: string | null; targetId: string | null; createdAt: string }>;
 };
 
 function Avatar({ user }: { user: AdminUser }) {
@@ -295,97 +316,12 @@ export default function AdminUsers() {
       </div>
 
       {/* User detail drawer */}
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="w-[380px] sm:w-[440px] overflow-y-auto">
-          {selected && (
-            <>
-              <SheetHeader className="pb-4 border-b">
-                <div className="flex items-center gap-3">
-                  <Avatar user={selected} />
-                  <div className="flex-1 min-w-0">
-                    <SheetTitle className="text-base truncate">{selected.email ?? "no email"}</SheetTitle>
-                    <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">{selected.id}</p>
-                  </div>
-                </div>
-              </SheetHeader>
-
-              <div className="py-5 space-y-5">
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { icon: Inbox, label: "Inbox", value: selected.inboxCount, color: "text-indigo-500" },
-                    { icon: Key, label: "API Keys", value: selected.apiKeyCount, color: "text-sky-500" },
-                    { icon: Globe, label: "Domains", value: selected.domainCount, color: "text-emerald-500" },
-                  ].map(({ icon: Icon, label, value, color }) => (
-                    <div key={label} className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 text-center">
-                      <Icon className={`h-4 w-4 mx-auto mb-1 ${color}`} />
-                      <p className="text-lg font-bold">{value}</p>
-                      <p className="text-xs text-muted-foreground">{label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Info */}
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-muted-foreground">Plan</span>
-                    {selected.plan === "pro"
-                      ? <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border-0 gap-1"><Crown className="h-3 w-3" />Pro</Badge>
-                      : <Badge variant="secondary">Free</Badge>}
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-muted-foreground">Role</span>
-                    {selected.role === "admin"
-                      ? <Badge className="bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300 border-0">Admin</Badge>
-                      : <Badge variant="outline">User</Badge>}
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-muted-foreground">Created</span>
-                    <span className="text-xs">{format(new Date(selected.createdAt), "dd/MM/yyyy HH:mm")}</span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {selected.plan === "pro" ? (
-                      <Button variant="outline" size="sm" className="gap-1.5 text-xs"
-                        disabled={patch.isPending}
-                        onClick={() => patch.mutate({ id: selected.id, body: { plan: "free" } })}>
-                        <ArrowDownCircle className="h-3.5 w-3.5" /> Downgrade to Free
-                      </Button>
-                    ) : (
-                      <Button size="sm" className="gap-1.5 text-xs bg-amber-500 hover:bg-amber-400 text-white border-0"
-                        disabled={patch.isPending}
-                        onClick={() => patch.mutate({ id: selected.id, body: { plan: "pro" } })}>
-                        <Crown className="h-3.5 w-3.5" /> Upgrade to Pro
-                      </Button>
-                    )}
-                    {selected.role !== "admin" ? (
-                      <Button size="sm" className="gap-1.5 text-xs bg-violet-600 hover:bg-violet-500 text-white border-0"
-                        disabled={patch.isPending}
-                        onClick={() => patch.mutate({ id: selected.id, body: { role: "admin" } })}>
-                        <Shield className="h-3.5 w-3.5" /> Set as Admin
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" className="gap-1.5 text-xs"
-                        disabled={patch.isPending}
-                        onClick={() => patch.mutate({ id: selected.id, body: { role: "user" } })}>
-                        <ShieldOff className="h-3.5 w-3.5" /> Remove Admin
-                      </Button>
-                    )}
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs text-red-500 border-red-200 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30 mt-1"
-                    onClick={() => setDeleteTarget(selected)}>
-                    <Trash2 className="h-3.5 w-3.5" /> Delete user & all data
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <UserDetailDrawer
+        selected={selected}
+        onClose={() => setSelected(null)}
+        patch={patch}
+        onDelete={(u) => setDeleteTarget(u)}
+      />
 
       {/* Promote by email dialog */}
       <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
@@ -440,5 +376,219 @@ export default function AdminUsers() {
         </DialogContent>
       </Dialog>
     </AdminLayout>
+  );
+}
+
+// Enhanced user detail drawer with tabbed data view
+function UserDetailDrawer({
+  selected,
+  onClose,
+  patch,
+  onDelete,
+}: {
+  selected: AdminUser | null;
+  onClose: () => void;
+  patch: ReturnType<typeof useMutation<unknown, Error, { id: string; body: Record<string, unknown> }>>;
+  onDelete: (u: AdminUser) => void;
+}) {
+  const { data: detail } = useQuery<UserDetail>({
+    queryKey: ["/admin/users/detail", selected?.id],
+    queryFn: () => apiFetch<UserDetail>(`/api/admin/users/${selected!.id}/detail`),
+    enabled: !!selected,
+  });
+
+  return (
+    <Sheet open={!!selected} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-[420px] sm:w-[520px] overflow-y-auto">
+        {selected && (
+          <>
+            <SheetHeader className="pb-4 border-b">
+              <div className="flex items-center gap-3">
+                <Avatar user={selected} />
+                <div className="flex-1 min-w-0">
+                  <SheetTitle className="text-base truncate">
+                    {detail?.user.displayName ?? selected.email ?? "no email"}
+                  </SheetTitle>
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">{selected.id}</p>
+                  {detail?.user.displayName && selected.email && (
+                    <p className="text-xs text-muted-foreground truncate">{selected.email}</p>
+                  )}
+                </div>
+              </div>
+            </SheetHeader>
+
+            <div className="py-5 space-y-5">
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { icon: Inbox, label: "Inbox", value: selected.inboxCount, color: "text-indigo-500" },
+                  { icon: Key, label: "API Keys", value: selected.apiKeyCount, color: "text-sky-500" },
+                  { icon: Globe, label: "Domains", value: selected.domainCount, color: "text-emerald-500" },
+                ].map(({ icon: Icon, label, value, color }) => (
+                  <div key={label} className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 text-center">
+                    <Icon className={`h-4 w-4 mx-auto mb-1 ${color}`} />
+                    <p className="text-lg font-bold">{value}</p>
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Info */}
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-muted-foreground">Plan</span>
+                  {selected.plan === "pro"
+                    ? <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border-0 gap-1"><Crown className="h-3 w-3" />Pro</Badge>
+                    : <Badge variant="secondary">Free</Badge>}
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-muted-foreground">Role</span>
+                  {selected.role === "admin"
+                    ? <Badge className="bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300 border-0">Admin</Badge>
+                    : <Badge variant="outline">User</Badge>}
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-muted-foreground">Created</span>
+                  <span className="text-xs">{format(new Date(selected.createdAt), "dd/MM/yyyy HH:mm")}</span>
+                </div>
+                {detail?.user.lastLoginAt && (
+                  <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="text-muted-foreground">Last Login</span>
+                    <span className="text-xs">{formatDistanceToNow(new Date(detail.user.lastLoginAt), { addSuffix: true })}</span>
+                  </div>
+                )}
+                {detail?.user.deletedAt && (
+                  <div className="flex items-center justify-between py-2 border-b border-red-200 dark:border-red-900">
+                    <span className="text-red-500">Deleted at</span>
+                    <span className="text-xs text-red-500">{format(new Date(detail.user.deletedAt), "dd/MM/yyyy HH:mm")}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Tabbed detail data */}
+              {detail && (
+                <Tabs defaultValue="inboxes" className="w-full">
+                  <TabsList className="w-full grid grid-cols-4 h-8">
+                    <TabsTrigger value="inboxes" className="text-xs gap-1">
+                      <Inbox className="h-3 w-3" /> {detail.inboxes.length}
+                    </TabsTrigger>
+                    <TabsTrigger value="emails" className="text-xs gap-1">
+                      <Mail className="h-3 w-3" /> {detail.recentEmails.length}
+                    </TabsTrigger>
+                    <TabsTrigger value="keys" className="text-xs gap-1">
+                      <Key className="h-3 w-3" /> {detail.apiKeys.length}
+                    </TabsTrigger>
+                    <TabsTrigger value="audit" className="text-xs gap-1">
+                      <ScrollText className="h-3 w-3" /> {detail.recentAudit.length}
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="inboxes" className="mt-3 space-y-2 max-h-[250px] overflow-y-auto">
+                    {detail.inboxes.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-4 text-center">No inboxes</p>
+                    ) : detail.inboxes.map((inbox) => (
+                      <div key={inbox.id} className="bg-muted/40 rounded-lg px-3 py-2 text-xs space-y-1">
+                        <div className="font-mono font-medium truncate">{inbox.address}</div>
+                        <div className="flex gap-3 text-muted-foreground">
+                          <span>{inbox.emailCount} emails</span>
+                          <span>Expires: {formatDistanceToNow(new Date(inbox.expiresAt), { addSuffix: true })}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </TabsContent>
+                  <TabsContent value="emails" className="mt-3 space-y-2 max-h-[250px] overflow-y-auto">
+                    {detail.recentEmails.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-4 text-center">No recent emails</p>
+                    ) : detail.recentEmails.map((email) => (
+                      <div key={email.id} className="bg-muted/40 rounded-lg px-3 py-2 text-xs space-y-1">
+                        <div className="font-medium truncate">{email.subject || "(no subject)"}</div>
+                        <div className="text-muted-foreground">
+                          From: {email.fromAddress} → {email.toAddress}
+                        </div>
+                        <div className="text-muted-foreground">
+                          {formatDistanceToNow(new Date(email.receivedAt), { addSuffix: true })}
+                        </div>
+                      </div>
+                    ))}
+                  </TabsContent>
+                  <TabsContent value="keys" className="mt-3 space-y-2 max-h-[250px] overflow-y-auto">
+                    {detail.apiKeys.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-4 text-center">No API keys</p>
+                    ) : detail.apiKeys.map((key) => (
+                      <div key={key.id} className="bg-muted/40 rounded-lg px-3 py-2 text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{key.name}</span>
+                          <span className="font-mono text-muted-foreground">{key.prefix}...</span>
+                        </div>
+                        <div className="flex gap-3 text-muted-foreground">
+                          {key.revokedAt ? (
+                            <span className="text-red-500">Revoked</span>
+                          ) : key.lastUsedAt ? (
+                            <span>Used {formatDistanceToNow(new Date(key.lastUsedAt), { addSuffix: true })}</span>
+                          ) : (
+                            <span>Never used</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </TabsContent>
+                  <TabsContent value="audit" className="mt-3 space-y-2 max-h-[250px] overflow-y-auto">
+                    {detail.recentAudit.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-4 text-center">No audit history</p>
+                    ) : detail.recentAudit.map((log) => (
+                      <div key={log.id} className="bg-muted/40 rounded-lg px-3 py-2 text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="secondary" className="text-[10px] h-5">{log.action}</Badge>
+                          <span className="text-muted-foreground">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
+                        </div>
+                        {log.targetType && (
+                          <div className="text-muted-foreground">{log.targetType}: {log.targetId}</div>
+                        )}
+                      </div>
+                    ))}
+                  </TabsContent>
+                </Tabs>
+              )}
+
+              {/* Actions */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {selected.plan === "pro" ? (
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs"
+                      disabled={patch.isPending}
+                      onClick={() => patch.mutate({ id: selected.id, body: { plan: "free" } })}>
+                      <ArrowDownCircle className="h-3.5 w-3.5" /> Downgrade to Free
+                    </Button>
+                  ) : (
+                    <Button size="sm" className="gap-1.5 text-xs bg-amber-500 hover:bg-amber-400 text-white border-0"
+                      disabled={patch.isPending}
+                      onClick={() => patch.mutate({ id: selected.id, body: { plan: "pro" } })}>
+                      <Crown className="h-3.5 w-3.5" /> Upgrade to Pro
+                    </Button>
+                  )}
+                  {selected.role !== "admin" ? (
+                    <Button size="sm" className="gap-1.5 text-xs bg-violet-600 hover:bg-violet-500 text-white border-0"
+                      disabled={patch.isPending}
+                      onClick={() => patch.mutate({ id: selected.id, body: { role: "admin" } })}>
+                      <Shield className="h-3.5 w-3.5" /> Set as Admin
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs"
+                      disabled={patch.isPending}
+                      onClick={() => patch.mutate({ id: selected.id, body: { role: "user" } })}>
+                      <ShieldOff className="h-3.5 w-3.5" /> Remove Admin
+                    </Button>
+                  )}
+                </div>
+                <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs text-red-500 border-red-200 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30 mt-1"
+                  onClick={() => onDelete(selected)}>
+                  <Trash2 className="h-3.5 w-3.5" /> Delete user & all data
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
