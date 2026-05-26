@@ -5,7 +5,7 @@ import { createClerkClient } from "@clerk/express";
 import { invalidateUserCache } from "../middlewares/clerk-auth";
 import { invalidateDomainCache } from "../lib/domain-cache";
 import { logAudit } from "../lib/audit";
-import type { AuthedRequest } from "../middlewares/clerk-auth";
+import { type AuthedRequest, ROLES } from "../middlewares/clerk-auth";
 
 const clerkClient = createClerkClient({
   secretKey: process.env["CLERK_SECRET_KEY"] ?? "",
@@ -44,14 +44,13 @@ router.patch("/users/:id", async (req, res) => {
   const { plan, role } = req.body ?? {};
   const patch: Record<string, unknown> = { updatedAt: new Date() };
   if (plan === "free" || plan === "pro") patch["plan"] = plan;
-  if (role === "user" || role === "admin") patch["role"] = role;
+  if (typeof role === "string" && (ROLES as readonly string[]).includes(role)) patch["role"] = role;
   if (Object.keys(patch).length === 1) {
     res.status(400).json({ error: "Nothing to update" });
     return;
   }
-  // Invariant: admin role always implies pro plan, so the system stays
-  // consistent (admins need API/custom domains to operate).
-  if (patch["role"] === "admin") patch["plan"] = "pro";
+  // Invariant: admin/super_admin role always implies pro plan.
+  if (patch["role"] === "admin" || patch["role"] === "super_admin") patch["plan"] = "pro";
   // If demoting an admin to user without specifying plan, leave plan as-is.
   const [row] = await db
     .update(usersTable)

@@ -16,6 +16,8 @@ import {
   Inbox,
   SlidersHorizontal,
   ScrollText,
+  HeartPulse,
+  Shield,
 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { AdminGate, AdminLogoutButton } from "@/components/admin-gate";
@@ -35,6 +37,8 @@ const NAV = [
   { href: "/admin/setup", label: "Setup Guide", icon: Settings },
   { href: "/admin/settings", label: "Settings", icon: SlidersHorizontal },
   { href: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
+  { href: "/admin/system-health", label: "System Health", icon: HeartPulse },
+  { href: "/admin/rate-limits", label: "Rate Limits", icon: Shield },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

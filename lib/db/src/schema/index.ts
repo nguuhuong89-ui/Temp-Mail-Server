@@ -6,3 +6,4 @@ export * from "./blocklist";
 export * from "./api-keys";
 export * from "./users";
 export * from "./audit-logs";
+export * from "./webhooks";

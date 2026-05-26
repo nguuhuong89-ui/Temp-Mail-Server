@@ -4,10 +4,20 @@ import { createClerkClient } from "@clerk/express";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
+export const ROLES = ["user", "moderator", "admin", "super_admin"] as const;
+export type Role = (typeof ROLES)[number];
+
+const ROLE_HIERARCHY: Record<Role, number> = {
+  user: 0,
+  moderator: 1,
+  admin: 2,
+  super_admin: 3,
+};
+
 export type AuthedRequest = Request & {
   userId?: string;
   userPlan?: string;
-  userRole?: string;
+  userRole?: Role;
 };
 
 const clerkClient = createClerkClient({
@@ -29,8 +39,8 @@ async function loadOrCreateUser(userId: string): Promise<{ plan: string; role: s
     .limit(1);
 
   if (existing) {
-    // Invariant: admin role implies pro plan.
-    const plan = existing.role === "admin" ? "pro" : existing.plan;
+    // Invariant: admin/super_admin role implies pro plan.
+    const plan = (existing.role === "admin" || existing.role === "super_admin") ? "pro" : existing.plan;
     const result = { plan, role: existing.role };
     userCache.set(userId, { ...result, expires: now + USER_TTL_MS });
     return result;
@@ -76,7 +86,7 @@ export async function attachUser(req: Request, _res: Response, next: NextFunctio
     const r = req as AuthedRequest;
     r.userId = userId;
     r.userPlan = plan;
-    r.userRole = role;
+    r.userRole = role as Role;
   } catch (err) {
     req.log.warn({ err: (err as Error)?.message }, "attachUser failed");
   }
@@ -111,8 +121,38 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
     res.status(401).json({ error: "Sign-in required" });
     return;
   }
-  if (r.userRole !== "admin") {
+  if (r.userRole !== "admin" && r.userRole !== "super_admin") {
     res.status(403).json({ error: "Admin only" });
+    return;
+  }
+  next();
+}
+
+export function requireRole(...roles: Role[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const r = req as AuthedRequest;
+    if (!r.userId) {
+      res.status(401).json({ error: "Sign-in required" });
+      return;
+    }
+    const userLevel = ROLE_HIERARCHY[r.userRole ?? "user"];
+    const minLevel = Math.min(...roles.map((role) => ROLE_HIERARCHY[role]));
+    if (userLevel < minLevel) {
+      res.status(403).json({ error: `Requires ${roles.join(" or ")} role` });
+      return;
+    }
+    next();
+  };
+}
+
+export function requireSuperAdmin(req: Request, res: Response, next: NextFunction): void {
+  const r = req as AuthedRequest;
+  if (!r.userId) {
+    res.status(401).json({ error: "Sign-in required" });
+    return;
+  }
+  if (r.userRole !== "super_admin") {
+    res.status(403).json({ error: "Super admin only" });
     return;
   }
   next();

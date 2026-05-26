@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { User, Mail, Key, Globe, Inbox, Trash2, Save, AlertTriangle } from "lucide-react";
+import { User, Mail, Key, Globe, Inbox, Trash2, Save, AlertTriangle, Download } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-fetch";
 import { useToast } from "@/hooks/use-toast";
@@ -137,6 +137,30 @@ export default function AccountProfile() {
         </Card>
 
         {/* Danger Zone */}
+        {/* Data Export */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" /> {t("profile.exportTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-3">{t("profile.exportDesc")}</p>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                window.open(
+                  `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/account/export`,
+                  "_blank",
+                );
+              }}
+            >
+              <Download className="h-4 w-4" /> {t("profile.exportButton")}
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card className="border-red-300 dark:border-red-900">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
