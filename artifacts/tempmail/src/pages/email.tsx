@@ -193,7 +193,7 @@ export default function EmailView() {
                           key="otp"
                           onClick={() => { navigator.clipboard.writeText(item.value); toast({ title: t("email.otpCopied"), description: item.value }); }}
                           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/70 border border-amber-300 dark:border-amber-700 transition-colors group"
-                          title="Click để copy OTP"
+                          title={t("email.clickToCopyOtp")}
                         >
                           <KeyRound className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
                           <span className="text-lg font-mono font-bold tracking-[0.2em] text-amber-800 dark:text-amber-200">{item.value}</span>

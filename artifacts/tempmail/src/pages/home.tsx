@@ -1,5 +1,5 @@
 import { PublicLayout } from "@/components/layout/public-layout";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Show } from "@clerk/react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useInboxStream } from "@/hooks/use-inbox-stream";
@@ -370,7 +370,7 @@ export default function Home() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetInboxQueryKey(address) });
-          toast({ title: "Đã xoá email" });
+          toast({ title: t("home.emailDeleted") });
         },
       },
     );
@@ -381,7 +381,7 @@ export default function Home() {
     extend.mutate({ address }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetInboxQueryKey(address) });
-        toast({ title: "✅ Đã gia hạn thêm 10 phút" });
+        toast({ title: t("home.extendedToast") });
       },
     });
   }, [address, extend, queryClient, toast]);
@@ -395,12 +395,12 @@ export default function Home() {
     if (!address) return;
     if (isSaved) {
       setSavedEmails(savedEmails.filter((e) => e !== address));
-      toast({ title: "Đã bỏ lưu email" });
+      toast({ title: t("home.unsavedToast") });
       return;
     }
     openAdWall(() => {
       setSavedEmails([address, ...savedEmails.filter((e) => e !== address)]);
-      toast({ title: "✅ Đã lưu email", description: address });
+      toast({ title: t("home.savedToast"), description: address });
     });
   };
 
@@ -586,7 +586,7 @@ export default function Home() {
                   variant="outline"
                   onClick={handleSaveEmail}
                   className={`border font-semibold transition-colors ${isSaved ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50" : "border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
-                  title={isSaved ? "Bỏ lưu email này" : "Lưu email để dùng lại"}
+                  title={isSaved ? t("home.unsaveEmailTitle") : t("home.saveEmailTitle")}
                 >
                   {isSaved
                     ? <><BookmarkCheck className="h-3.5 w-3.5 mr-1" /> {t("home.saved")}</>
@@ -739,7 +739,7 @@ export default function Home() {
                                 key="otp"
                                 onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.value); toast({ title: t("home.otpCopied"), description: item.value }); }}
                                 className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-xs font-mono font-bold hover:bg-amber-200 dark:hover:bg-amber-800/70 border border-amber-300 dark:border-amber-700 transition-colors"
-                                title="Click để copy OTP"
+                                title={t("home.clickToCopyOtp")}
                               >
                                 <KeyRound className="h-2.5 w-2.5" /> {item.value}
                               </button>
@@ -751,7 +751,7 @@ export default function Home() {
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
                                 className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 text-xs font-semibold hover:bg-indigo-200 dark:hover:bg-indigo-800/70 border border-indigo-300 dark:border-indigo-700 transition-colors"
-                                title="Mở link xác minh"
+                                title={t("home.openVerifyLink")}
                               >
                                 <Link2 className="h-2.5 w-2.5" /> Verify
                               </a>
@@ -844,12 +844,12 @@ export default function Home() {
             <h3 className="font-bold text-base text-slate-800 dark:text-slate-100">{t("home.noticeTitle")}</h3>
           </div>
           <ul className="space-y-1.5 text-sm text-slate-500 dark:text-slate-400 list-disc pl-5">
-            <li>Chúng tôi không quản lý trực tiếp các domain. Chúng được kiểm soát bởi chủ sở hữu, người có thể thêm/xóa bất kỳ lúc nào.</li>
-            <li>Nếu email của bạn offline, domain đó đã bị gỡ. Chúng tôi không thể khôi phục.</li>
-            <li>Dịch vụ này chỉ <strong className="text-slate-700 dark:text-slate-300">nhận</strong> email tạm thời.</li>
-            <li>Gửi email, bulk mailing, hay SMTP relay <strong className="text-slate-700 dark:text-slate-300">không được hỗ trợ</strong>.</li>
-            <li>Chỉ dùng để test, bảo vệ quyền riêng tư, tránh spam.</li>
-            <li>Lạm dụng, gian lận, phishing hoặc tạo tài khoản hàng loạt là <strong className="text-rose-600 dark:text-rose-400">vi phạm</strong>.</li>
+            <li>{t("home.notice1")}</li>
+            <li>{t("home.notice2")}</li>
+            <li><Trans i18nKey="home.notice3" components={{ 1: <strong className="text-slate-700 dark:text-slate-300" /> }} /></li>
+            <li><Trans i18nKey="home.notice4" components={{ 1: <strong className="text-slate-700 dark:text-slate-300" /> }} /></li>
+            <li>{t("home.notice5")}</li>
+            <li><Trans i18nKey="home.notice6" components={{ 1: <strong className="text-rose-600 dark:text-rose-400" /> }} /></li>
           </ul>
         </div>
 

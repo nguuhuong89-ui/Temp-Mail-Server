@@ -146,7 +146,7 @@ function DomainsInner() {
                       </div>
                       <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
                         <span className="text-muted-foreground">{t("domains.dnsName")}</span>
-                        <span>@ (hoặc {d.name})</span>
+                        <span>{t("domains.dnsNameHint", { domain: d.name })}</span>
                         <span></span>
                       </div>
                       <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
