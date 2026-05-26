@@ -48,8 +48,8 @@ router.use(blocklistRouter);
 router.use(apiKeysRouter);
 router.use(adminInboxesRouter);
 router.use(adminSettingsRouter);
-router.use(adminAuditRouter);
-router.use(adminRateLimitsRouter);
-router.use(adminHealthRouter);
+router.use("/admin", adminAuditRouter);
+router.use("/admin", adminRateLimitsRouter);
+router.use("/admin", adminHealthRouter);
 
 export default router;
