@@ -44,5 +44,6 @@ COPY --from=build /app/package.json ./
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV SMTP_PORT=25
-EXPOSE 8080 25
+EXPOSE 8080
+EXPOSE 25
 CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
