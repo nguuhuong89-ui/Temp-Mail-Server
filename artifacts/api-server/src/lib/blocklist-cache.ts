@@ -3,9 +3,24 @@ import { SingletonCache } from "./cache";
 
 export type BlockEntry = { pattern: string; type: string };
 
-const cache = new SingletonCache<BlockEntry[]>(30_000, async () => {
+type BlockIndex = {
+  entries: BlockEntry[];
+  senders: Set<string>;
+  domainPatterns: string[];
+};
+
+const cache = new SingletonCache<BlockIndex>(60_000, async () => {
   const rows = await db.select().from(blocklistTable);
-  return rows.map((r) => ({ pattern: r.pattern.toLowerCase(), type: r.type }));
+  const entries: BlockEntry[] = [];
+  const senders = new Set<string>();
+  const domainPatterns: string[] = [];
+  for (const r of rows) {
+    const p = r.pattern.toLowerCase();
+    entries.push({ pattern: p, type: r.type });
+    if (r.type === "sender") senders.add(p);
+    else if (r.type === "domain") domainPatterns.push(p);
+  }
+  return { entries, senders, domainPatterns };
 });
 
 export function invalidateBlocklist(): void {
@@ -14,16 +29,17 @@ export function invalidateBlocklist(): void {
 
 export async function isSenderBlocked(fromAddress: string): Promise<boolean> {
   const sender = fromAddress.toLowerCase();
+  const { senders, domainPatterns } = await cache.get();
+  if (senders.has(sender)) return true;
   const senderDomain = sender.split("@")[1] ?? "";
-  const entries = await cache.get();
-  for (const e of entries) {
-    if (e.type === "sender" && sender === e.pattern) return true;
-    if (e.type === "domain" && senderDomain && senderDomain === e.pattern) return true;
-    if (e.type === "domain" && senderDomain.endsWith("." + e.pattern)) return true;
+  if (!senderDomain) return false;
+  for (const d of domainPatterns) {
+    if (senderDomain === d || senderDomain.endsWith("." + d)) return true;
   }
   return false;
 }
 
 export async function listBlocklist(): Promise<BlockEntry[]> {
-  return cache.get();
+  const { entries } = await cache.get();
+  return entries;
 }

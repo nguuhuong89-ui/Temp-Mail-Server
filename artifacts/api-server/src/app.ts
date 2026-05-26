@@ -16,10 +16,17 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 app.set("trust proxy", 1);
+app.set("etag", "weak");
 
 app.use(
   pinoHttp({
     logger,
+    autoLogging: {
+      ignore: (req) => {
+        const url = (req as { url?: string }).url ?? "";
+        return url === "/api/health" || url.endsWith("/stream");
+      },
+    },
     serializers: {
       req(req) {
         return {
@@ -42,14 +49,27 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors());
 app.use(
   compression({
+    threshold: 1024,
     filter: (req, res) => {
       if (req.path.endsWith("/stream")) return false;
       return compression.filter(req, res);
     },
   }),
 );
-app.use(express.json({ limit: "256kb" }));
-app.use(express.urlencoded({ extended: true, limit: "256kb" }));
+// Only parse body for methods that carry a body — skip for GET/HEAD/DELETE
+// to avoid unnecessary buffering overhead on read-heavy paths.
+const jsonParser = express.json({ limit: "256kb" });
+const urlencodedParser = express.urlencoded({ extended: true, limit: "256kb" });
+app.use((req, res, next) => {
+  if (req.method === "GET" || req.method === "HEAD") {
+    next();
+    return;
+  }
+  jsonParser(req, res, (err?: unknown) => {
+    if (err) { next(err); return; }
+    urlencodedParser(req, res, next);
+  });
+});
 
 app.use(
   clerkMiddleware((req) => ({

@@ -10,7 +10,7 @@ export type CachedDomain = {
   webhookUrl: string | null;
 };
 
-const allDomainsCache = new SingletonCache<Map<string, CachedDomain>>(30_000, async () => {
+const allDomainsCache = new SingletonCache<Map<string, CachedDomain>>(120_000, async () => {
   const rows = await db.select().from(domainsTable);
   const m = new Map<string, CachedDomain>();
   for (const r of rows) {

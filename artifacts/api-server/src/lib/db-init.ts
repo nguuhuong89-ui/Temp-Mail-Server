@@ -45,6 +45,7 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS emails_to_received_idx ON emails (to_address, received_at);
     CREATE INDEX IF NOT EXISTS emails_received_idx    ON emails (received_at);
     CREATE INDEX IF NOT EXISTS emails_domain_idx      ON emails (domain_id);
+    CREATE INDEX IF NOT EXISTS emails_from_idx        ON emails (from_address);
 
     CREATE TABLE IF NOT EXISTS users (
       id         TEXT PRIMARY KEY,

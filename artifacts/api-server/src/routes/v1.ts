@@ -145,8 +145,10 @@ router.delete("/v1/inboxes/:address", async (req, res) => {
   const r = await loadOwnedInbox(address, ownerId(req));
   if (r.status === 404) { res.status(404).json({ error: "Inbox not found" }); return; }
 
-  await db.delete(emailsTable).where(eq(emailsTable.toAddress, address));
-  await db.delete(inboxesTable).where(eq(inboxesTable.address, address));
+  await Promise.all([
+    db.delete(emailsTable).where(eq(emailsTable.toAddress, address)),
+    db.delete(inboxesTable).where(eq(inboxesTable.address, address)),
+  ]);
   res.status(204).end();
 });
 

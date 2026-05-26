@@ -24,6 +24,7 @@ const clerkClient = createClerkClient({
   secretKey: process.env["CLERK_SECRET_KEY"] ?? "",
 });
 
+const USER_CACHE_MAX = 10_000;
 const userCache = new Map<string, { plan: string; role: string; expires: number }>();
 const USER_TTL_MS = 30_000;
 
@@ -42,6 +43,10 @@ async function loadOrCreateUser(userId: string): Promise<{ plan: string; role: s
     // Invariant: admin/super_admin role implies pro plan.
     const plan = (existing.role === "admin" || existing.role === "super_admin") ? "pro" : existing.plan;
     const result = { plan, role: existing.role };
+    if (userCache.size >= USER_CACHE_MAX) {
+      const first = userCache.keys().next().value;
+      if (first !== undefined) userCache.delete(first);
+    }
     userCache.set(userId, { ...result, expires: now + USER_TTL_MS });
     return result;
   }

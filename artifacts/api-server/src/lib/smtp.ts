@@ -9,10 +9,16 @@ import { isSenderBlocked } from "./blocklist-cache";
 import { fireEmailWebhook } from "./webhooks";
 
 export function startSmtpServer(port: number): SMTPServer {
+  const maxConnections = Number(process.env["SMTP_MAX_CONNECTIONS"] ?? 100);
+  const socketTimeout = Number(process.env["SMTP_SOCKET_TIMEOUT"] ?? 60_000);
+
   const server = new SMTPServer({
     authOptional: true,
     disabledCommands: ["AUTH", "STARTTLS"],
     size: 5 * 1024 * 1024, // 5MB cap
+    maxClients: maxConnections,
+    socketTimeout,
+    closeTimeout: 3_000,
     onRcptTo(address, _session, callback) {
       const domainName = address.address.split("@")[1]?.toLowerCase() ?? "";
       if (!domainName) {
@@ -54,17 +60,28 @@ export function startSmtpServer(port: number): SMTPServer {
             return;
           }
 
+          // Pre-resolve all recipient domains in one batch (cache is shared so
+          // this effectively just de-duplicates the cache read).
+          const recipients = session.envelope.rcptTo.map((r) => r.address.toLowerCase());
+          const domainNames = [...new Set(recipients.map((a) => a.split("@")[1] ?? ""))];
+          const domainMap = new Map<string, Awaited<ReturnType<typeof lookupDomain>>>();
+          await Promise.all(
+            domainNames.map(async (dn) => {
+              domainMap.set(dn, await lookupDomain(dn));
+            }),
+          );
+
           // Process all recipients in parallel for faster delivery
           await Promise.all(
-            session.envelope.rcptTo.map(async (rcpt) => {
-              const toAddress = rcpt.address.toLowerCase();
+            recipients.map(async (toAddress) => {
               const domainName = toAddress.split("@")[1] ?? "";
-              const domain = await lookupDomain(domainName);
+              const domain = domainMap.get(domainName);
               if (!domain || domain.status !== "active") {
                 logger.warn({ toAddress }, "Rejected mail for inactive/unknown domain");
                 return;
               }
-              // Auto-create inbox row and insert email in parallel
+              // Insert email first (the latency-critical path), auto-create
+              // inbox in parallel — inbox upsert is fire-and-forget.
               const [, [row]] = await Promise.all([
                 db
                   .insert(inboxesTable)

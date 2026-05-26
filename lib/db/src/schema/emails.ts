@@ -18,6 +18,7 @@ export const emailsTable = pgTable(
     index("emails_to_received_idx").on(t.toAddress, t.receivedAt),
     index("emails_received_idx").on(t.receivedAt),
     index("emails_domain_idx").on(t.domainId),
+    index("emails_from_idx").on(t.fromAddress),
   ],
 );
 

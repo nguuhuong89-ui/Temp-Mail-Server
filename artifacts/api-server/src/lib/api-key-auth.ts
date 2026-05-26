@@ -43,6 +43,16 @@ const MAX_DEBOUNCE_ENTRIES = 10_000;
 const lastUsedDebounce = new Map<number, number>();
 const LAST_USED_INTERVAL_MS = 60_000;
 
+type CachedKey = { id: number; keyHash: string; userId: string | null; expires: number };
+const keyLookupCache = new Map<string, CachedKey>();
+const KEY_CACHE_TTL_MS = 30_000;
+const KEY_CACHE_MAX = 5_000;
+
+export function invalidateApiKeyCache(hash?: string): void {
+  if (hash) keyLookupCache.delete(hash);
+  else keyLookupCache.clear();
+}
+
 export async function apiKeyAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const provided = extractKey(req);
   if (!provided || !provided.startsWith(KEY_PREFIX)) {
@@ -50,33 +60,40 @@ export async function apiKeyAuth(req: Request, res: Response, next: NextFunction
     return;
   }
   const hash = sha256(provided);
-  const [row] = await db
-    .select()
-    .from(apiKeysTable)
-    .where(and(eq(apiKeysTable.keyHash, hash), isNull(apiKeysTable.revokedAt)))
-    .limit(1);
-  if (!row || !safeEqual(row.keyHash, hash)) {
-    res.status(401).json({ error: "Invalid or revoked API key" });
-    return;
-  }
-  (req as Request & { apiKeyId?: number; apiKeyUserId?: string | null }).apiKeyId = row.id;
-  (req as Request & { apiKeyUserId?: string | null }).apiKeyUserId = row.userId;
+
   const now = Date.now();
-  const last = lastUsedDebounce.get(row.id) ?? 0;
+  let cached = keyLookupCache.get(hash);
+  if (!cached || cached.expires < now) {
+    const [row] = await db
+      .select()
+      .from(apiKeysTable)
+      .where(and(eq(apiKeysTable.keyHash, hash), isNull(apiKeysTable.revokedAt)))
+      .limit(1);
+    if (!row || !safeEqual(row.keyHash, hash)) {
+      keyLookupCache.delete(hash);
+      res.status(401).json({ error: "Invalid or revoked API key" });
+      return;
+    }
+    if (keyLookupCache.size >= KEY_CACHE_MAX) {
+      const first = keyLookupCache.keys().next().value;
+      if (first !== undefined) keyLookupCache.delete(first);
+    }
+    cached = { id: row.id, keyHash: row.keyHash, userId: row.userId, expires: now + KEY_CACHE_TTL_MS };
+    keyLookupCache.set(hash, cached);
+  }
+
+  (req as Request & { apiKeyId?: number; apiKeyUserId?: string | null }).apiKeyId = cached.id;
+  (req as Request & { apiKeyUserId?: string | null }).apiKeyUserId = cached.userId;
+  const last = lastUsedDebounce.get(cached.id) ?? 0;
   if (now - last > LAST_USED_INTERVAL_MS) {
     if (lastUsedDebounce.size >= MAX_DEBOUNCE_ENTRIES) {
-      // Evict oldest entries when the map grows too large.
-      let oldest = Infinity;
-      let oldestKey: number | undefined;
-      for (const [k, v] of lastUsedDebounce) {
-        if (v < oldest) { oldest = v; oldestKey = k; }
-      }
-      if (oldestKey !== undefined) lastUsedDebounce.delete(oldestKey);
+      const first = lastUsedDebounce.keys().next().value;
+      if (first !== undefined) lastUsedDebounce.delete(first);
     }
-    lastUsedDebounce.set(row.id, now);
+    lastUsedDebounce.set(cached.id, now);
     db.update(apiKeysTable)
       .set({ lastUsedAt: new Date() })
-      .where(eq(apiKeysTable.id, row.id))
+      .where(eq(apiKeysTable.id, cached.id))
       .catch((err) => logger.warn({ err: err?.message }, "failed to update api key lastUsedAt"));
   }
   next();
