@@ -1,0 +1,57 @@
+##
+## docker-compose for Coolify (uses pre-built GHCR images)
+##
+## Usage on Coolify:
+##   1. Set Docker Compose Custom File to: docker-compose.coolify.yml
+##   2. Set environment variables in Coolify panel (DATABASE_URL, ADMIN_TOKEN, etc.)
+##   3. Deploy — Coolify will pull images from GHCR, no build required
+##
+## The images are automatically built on every push to main via GitHub Actions.
+## See .github/workflows/build-images.yml
+##
+
+services:
+  api:
+    image: ghcr.io/nguuhuong89-ui/temp-mail-server-api:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: "8080"
+      NODE_ENV: production
+      SMTP_PORT: ${SMTP_PORT:-25}
+      MAIL_DOMAIN: ${MAIL_DOMAIN:-mail.example.com}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-change_me}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    expose:
+      - "8080"
+    ports:
+      - "${SMTP_HOST_PORT:-25}:25"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:8080/api/healthz').then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    labels:
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+    networks:
+      - default
+      - coolify
+
+  web:
+    image: ghcr.io/nguuhuong89-ui/temp-mail-server-web:latest
+    restart: unless-stopped
+    depends_on:
+      - api
+    expose:
+      - "80"
+    networks:
+      - default
+      - coolify
+
+networks:
+  coolify:
+    external: true

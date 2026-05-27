@@ -14,6 +14,7 @@ import {
   Menu,
   User,
   Webhook,
+  BookmarkCheck,
 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { useQuery } from "@tanstack/react-query";
@@ -65,6 +66,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     { href: "/account", label: t("accountLayout.overview"), icon: InboxIcon },
     { href: "/account/profile", label: t("accountLayout.profile"), icon: User },
     { href: "/account/inboxes", label: t("account.inboxes"), icon: Mail },
+    { href: "/account/saved-inboxes", label: t("account.savedInboxes"), icon: BookmarkCheck },
     { href: "/account/api-keys", label: "API Keys", icon: Key, proOnly: true },
     { href: "/account/domains", label: t("account.domains"), icon: Globe, proOnly: true },
     { href: "/account/webhooks", label: t("accountLayout.webhooks"), icon: Webhook, proOnly: true },

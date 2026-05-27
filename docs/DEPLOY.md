@@ -115,12 +115,38 @@ Then access Coolify at `http://your-server-ip:8000`.
 
 ### Deploy AutoMail via Coolify
 
+You have **two options**: use pre-built images (recommended) or build from source.
+
+#### Option B1 — Pre-built images (recommended, no build on server)
+
+Docker images are automatically built on every push to `main` via GitHub Actions and published to GHCR.
+
+1. **New Project** → **New Resource** → **Docker Compose**
+2. **Source**: Git → connect your repository
+3. **Branch**: `main`
+4. **Docker Compose File**: `docker-compose.coolify.yml`
+
+> This uses pre-built images from `ghcr.io/nguuhuong89-ui/temp-mail-server-api` and `ghcr.io/nguuhuong89-ui/temp-mail-server-web`. Your server only pulls images — no CPU/RAM spent on building.
+
+**GitHub Actions secrets** (set in your repo → Settings → Secrets):
+- `VITE_CLERK_PUBLISHABLE_KEY` — Clerk publishable key (baked into frontend build)
+- `VITE_CLERK_PROXY_URL` — Clerk proxy URL (optional)
+
+#### Option B2 — Build from source (original method)
+
 1. **New Project** → **New Resource** → **Docker Compose**
 2. **Source**: Git → connect your repository
 3. **Branch**: `main`
 4. **Docker Compose File**: `docker-compose.yml`
 
-#### Environment Variables
+In Coolify's **Build Arguments** panel:
+
+```
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
+VITE_CLERK_PROXY_URL=https://mail.yourdomain.com/api/__clerk
+```
+
+#### Environment Variables (both options)
 
 In Coolify's **Environment Variables** panel, add:
 
@@ -140,15 +166,6 @@ CLERK_SECRET_KEY=sk_live_...
 CLERK_PUBLISHABLE_KEY=pk_live_...
 VITE_CLERK_PROXY_URL=https://mail.yourdomain.com/api/__clerk
 ADMIN_EMAILS=you@yourdomain.com
-```
-
-#### Build Arguments
-
-In Coolify's **Build Arguments** panel:
-
-```
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
-VITE_CLERK_PROXY_URL=https://mail.yourdomain.com/api/__clerk
 ```
 
 #### Port Mappings

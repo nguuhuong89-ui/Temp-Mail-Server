@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, apiKeysTable, inboxesTable, domainsTable, emailsTable, usersTable, auditLogsTable } from "@workspace/db";
+import { db, apiKeysTable, inboxesTable, domainsTable, emailsTable, usersTable, auditLogsTable, savedInboxesTable } from "@workspace/db";
 import { and, eq, desc, sql, isNull } from "drizzle-orm";
 import { generateApiKey } from "../lib/api-key-auth";
 import { generateDomainToken, verifyDomainTxt, verifyRecordValue } from "../lib/domain-verify";
@@ -195,6 +195,88 @@ router.delete("/account/inboxes/:address", requireUser, async (req, res) => {
   }
   await db.delete(emailsTable).where(eq(emailsTable.toAddress, address));
   await db.delete(inboxesTable).where(eq(inboxesTable.address, address));
+  res.status(204).end();
+});
+
+// === Saved inboxes (persistent, server-side) ===
+router.get("/account/saved-inboxes", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const rows = await db
+    .select({
+      id: savedInboxesTable.id,
+      address: savedInboxesTable.address,
+      label: savedInboxesTable.label,
+      savedAt: savedInboxesTable.createdAt,
+      emailCount: sql<number>`count(${emailsTable.id})::int`,
+      lastEmailAt: sql<string | null>`max(${emailsTable.receivedAt})::text`,
+    })
+    .from(savedInboxesTable)
+    .leftJoin(emailsTable, eq(emailsTable.toAddress, savedInboxesTable.address))
+    .where(eq(savedInboxesTable.userId, r.userId!))
+    .groupBy(savedInboxesTable.id)
+    .orderBy(desc(savedInboxesTable.createdAt))
+    .limit(100);
+  res.json(
+    rows.map((r) => ({
+      id: r.id,
+      address: r.address,
+      label: r.label,
+      savedAt: r.savedAt.toISOString(),
+      emailCount: Number(r.emailCount ?? 0),
+      lastEmailAt: r.lastEmailAt ?? null,
+    })),
+  );
+});
+
+router.post("/account/saved-inboxes", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const { address, label } = req.body ?? {};
+  if (typeof address !== "string" || !address.includes("@")) {
+    res.status(400).json({ error: "Valid address required" });
+    return;
+  }
+  const trimLabel = typeof label === "string" ? label.trim().slice(0, 100) || null : null;
+  try {
+    const [row] = await db
+      .insert(savedInboxesTable)
+      .values({ userId: r.userId!, address: address.toLowerCase(), label: trimLabel })
+      .returning();
+    if (!row) { res.status(500).json({ error: "Insert failed" }); return; }
+    res.status(201).json({
+      id: row.id,
+      address: row.address,
+      label: row.label,
+      savedAt: row.createdAt.toISOString(),
+    });
+  } catch {
+    res.status(409).json({ error: "Already saved" });
+  }
+});
+
+router.patch("/account/saved-inboxes/:id", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const id = Number(req.params["id"]);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { label } = req.body ?? {};
+  if (typeof label !== "string") { res.status(400).json({ error: "label required" }); return; }
+  const [row] = await db
+    .update(savedInboxesTable)
+    .set({ label: label.trim().slice(0, 100) || null })
+    .where(and(eq(savedInboxesTable.id, id), eq(savedInboxesTable.userId, r.userId!)))
+    .returning();
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  res.json({ id: row.id, address: row.address, label: row.label });
+});
+
+router.delete("/account/saved-inboxes/:id", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const id = Number(req.params["id"]);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const result = await db
+    .delete(savedInboxesTable)
+    .where(and(eq(savedInboxesTable.id, id), eq(savedInboxesTable.userId, r.userId!)))
+    .returning({ id: savedInboxesTable.id });
+  if (result.length === 0) { res.status(404).json({ error: "Not found" }); return; }
   res.status(204).end();
 });
 

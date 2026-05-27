@@ -18,7 +18,7 @@ router.put("/system-settings", (req, res) => {
     runtimeSettings.anonRetentionHours = Math.max(1, Math.min(24 * 28, Math.round(anonRetentionHours)));
   }
   if (typeof emailRetentionDays === "number" && emailRetentionDays > 0) {
-    runtimeSettings.emailRetentionDays = Math.max(1, Math.min(90, Math.round(emailRetentionDays)));
+    runtimeSettings.emailRetentionDays = Math.max(1, Math.min(365, Math.round(emailRetentionDays)));
   }
   void logAudit({ action: "settings.update", actorId: r.userId ?? "admin", targetType: "settings", metadata: { ...runtimeSettings }, req });
   res.json({ ...runtimeSettings });
