@@ -18,8 +18,7 @@ type Domain = {
   name: string;
   status: string;
   verifiedAt: string | null;
-  verificationToken: string | null;
-  verificationRecord: string | null;
+  mxHost: string;
   createdAt: string;
 };
 
@@ -134,32 +133,33 @@ function DomainsInner() {
                   </Button>
                 </div>
               </CardHeader>
-              {!d.verifiedAt && d.verificationRecord && (
+              {!d.verifiedAt && (
                 <CardContent className="space-y-3">
                   <div className="text-sm">
-                    <p className="text-muted-foreground mb-2">{t("domains.dnsRecord")} <span className="font-mono">{d.name}</span>:</p>
+                    <p className="text-muted-foreground mb-2">{t("domains.mxInstruction")}</p>
                     <div className="bg-muted rounded-lg p-3 space-y-2 font-mono text-xs">
                       <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
                         <span className="text-muted-foreground">{t("domains.dnsType")}</span>
-                        <span>TXT</span>
+                        <span>MX</span>
                         <span></span>
                       </div>
                       <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
                         <span className="text-muted-foreground">{t("domains.dnsName")}</span>
-                        <span>{t("domains.dnsNameHint", { domain: d.name })}</span>
+                        <span>@ ({t("domains.orDomain", { domain: d.name })})</span>
+                        <span></span>
+                      </div>
+                      <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
+                        <span className="text-muted-foreground">{t("domains.dnsPriority")}</span>
+                        <span>10</span>
                         <span></span>
                       </div>
                       <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
                         <span className="text-muted-foreground">{t("domains.dnsValue")}</span>
-                        <span className="break-all" data-testid={`text-record-${d.id}`}>{d.verificationRecord}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copy(d.verificationRecord!)}><Copy className="h-3 w-3" /></Button>
+                        <span className="break-all" data-testid={`text-mx-${d.id}`}>{d.mxHost}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copy(d.mxHost)}><Copy className="h-3 w-3" /></Button>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">{t("domains.dnsPropagation")}</p>
-                  </div>
-                  <div className="text-xs text-muted-foreground border-t pt-3">
-                    <p className="font-medium mb-1">{t("domains.mxHint")}</p>
-                    <p className="font-mono">{t("domains.mxDetail")}</p>
                   </div>
                 </CardContent>
               )}

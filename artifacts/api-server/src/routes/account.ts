@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, apiKeysTable, inboxesTable, domainsTable, emailsTable, usersTable, auditLogsTable, savedInboxesTable } from "@workspace/db";
 import { and, eq, desc, sql, isNull } from "drizzle-orm";
 import { generateApiKey } from "../lib/api-key-auth";
-import { generateDomainToken, verifyDomainTxt, verifyRecordValue } from "../lib/domain-verify";
+import { verifyDomainMx } from "../lib/domain-verify";
 import { invalidateDomainCache } from "../lib/domain-cache";
 import { attachUser, requireUser, requirePro, type AuthedRequest } from "../middlewares/clerk-auth";
 
@@ -284,6 +284,8 @@ router.delete("/account/saved-inboxes/:id", requireUser, async (req, res) => {
 });
 
 // === Custom domains (requires Pro) ===
+const MAIL_HOST = process.env["MAIL_DOMAIN"] || "mail.vnsi.app";
+
 router.get("/account/domains", requireUser, requirePro, async (req, res) => {
   const r = req as AuthedRequest;
   const rows = await db
@@ -297,8 +299,7 @@ router.get("/account/domains", requireUser, requirePro, async (req, res) => {
       name: d.name,
       status: d.status,
       verifiedAt: d.verifiedAt?.toISOString() ?? null,
-      verificationToken: d.verificationToken,
-      verificationRecord: d.verificationToken ? verifyRecordValue(d.verificationToken) : null,
+      mxHost: MAIL_HOST,
       createdAt: d.createdAt.toISOString(),
     })),
   );
@@ -311,7 +312,6 @@ router.post("/account/domains", requireUser, requirePro, async (req, res) => {
     res.status(400).json({ error: "Invalid domain name" });
     return;
   }
-  const token = generateDomainToken();
   try {
     const [row] = await db
       .insert(domainsTable)
@@ -320,7 +320,6 @@ router.post("/account/domains", requireUser, requirePro, async (req, res) => {
         userId: r.userId!,
         status: "pending",
         isPublic: false,
-        verificationToken: token,
       })
       .returning();
     if (!row) { res.status(500).json({ error: "Insert failed" }); return; }
@@ -328,8 +327,7 @@ router.post("/account/domains", requireUser, requirePro, async (req, res) => {
       id: row.id,
       name: row.name,
       status: row.status,
-      verificationToken: row.verificationToken,
-      verificationRecord: verifyRecordValue(token),
+      mxHost: MAIL_HOST,
       verifiedAt: null,
       createdAt: row.createdAt.toISOString(),
     });
@@ -348,14 +346,13 @@ router.post("/account/domains/:id/verify", requireUser, requirePro, async (req, 
     .where(and(eq(domainsTable.id, id), eq(domainsTable.userId, r.userId!)))
     .limit(1);
   if (!domain) { res.status(404).json({ error: "Domain not found" }); return; }
-  if (!domain.verificationToken) { res.status(400).json({ error: "No verification token" }); return; }
 
-  const result = await verifyDomainTxt(domain.name, domain.verificationToken);
+  const result = await verifyDomainMx(domain.name, MAIL_HOST);
   if (!result.ok) {
     res.status(400).json({
       ok: false,
-      error: "TXT record not found. Please add the verification record and wait for DNS propagation.",
-      expected: verifyRecordValue(domain.verificationToken),
+      error: `MX record not found. Please add an MX record pointing to ${MAIL_HOST} and wait for DNS propagation.`,
+      expectedMx: MAIL_HOST,
       foundRecords: result.records,
       dnsError: result.error,
     });
