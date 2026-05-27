@@ -4,9 +4,10 @@ This guide covers deploying AutoMail to a production server.
 
 ## Table of Contents
 
-- [Option A — VPS with Docker Compose](#option-a--vps-with-docker-compose)
+- [Option A — VPS with Docker Compose (build from source)](#option-a--vps-with-docker-compose)
 - [Option B — Coolify](#option-b--coolify)
-- [Option C — Bare Docker (no Compose)](#option-c--bare-docker-no-compose)
+- [Option C — VPS with Pre-built Images (no build)](#option-c--vps-with-pre-built-images-no-build-on-server)
+- [Option D — Bare Docker (no Compose)](#option-d--bare-docker-no-compose)
 - [Reverse Proxy & HTTPS](#reverse-proxy--https)
 - [Updating / Redeploying](#updating--redeploying)
 - [Backups](#backups)
@@ -163,7 +164,66 @@ Add a port mapping for SMTP:
 
 ---
 
-## Option C — Bare Docker (no Compose)
+## Option C — VPS with Pre-built Images (no build on server)
+
+Docker images are automatically built via GitHub Actions on every push to `main` and published to GHCR. This method **skips building on your server** — it only pulls pre-built images.
+
+### Step 1 — Install Docker
+
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### Step 2 — Clone and configure
+
+```bash
+git clone https://github.com/nguuhuong89-ui/Temp-Mail-Server.git
+cd Temp-Mail-Server
+cp .env.example .env
+nano .env
+```
+
+Set at minimum:
+
+```env
+DATABASE_URL=postgres://tempmail:STRONG_PASSWORD@postgres:5432/tempmail
+MAIL_DOMAIN=mail.yourdomain.com
+ADMIN_TOKEN=<output of: openssl rand -hex 32>
+CLERK_SECRET_KEY=sk_live_...
+CLERK_PUBLISHABLE_KEY=pk_live_...
+ADMIN_EMAILS=you@yourdomain.com
+```
+
+### Step 3 — Start with pre-built images
+
+```bash
+# Pull and start (no build!)
+docker compose -f docker-compose.coolify.yml up -d
+
+# Check status
+docker compose -f docker-compose.coolify.yml ps
+
+# View logs
+docker compose -f docker-compose.coolify.yml logs -f
+```
+
+### Step 4 — Update to latest version
+
+```bash
+# Pull latest images and recreate
+docker compose -f docker-compose.coolify.yml pull
+docker compose -f docker-compose.coolify.yml up -d --force-recreate
+```
+
+> **GitHub Actions secrets** (for image building): Set `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_CLERK_PROXY_URL` in repo → Settings → Secrets → Actions.
+
+> **Note**: This method does NOT work with Coolify due to Traefik routing limitations. For Coolify, use Option B (build from source).
+
+---
+
+## Option D — Bare Docker (no Compose)
 
 If you want to run individual containers manually:
 
