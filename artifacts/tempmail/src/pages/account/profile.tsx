@@ -83,9 +83,8 @@ export default function AccountProfile() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>{t("profile.email")}</Label>
-              <Input value={me?.email ?? ""} disabled className="bg-muted" />
-              <p className="text-xs text-muted-foreground">{t("profile.emailManaged")}</p>
+              <Label>{t("profile.userId")}</Label>
+              <Input value={me?.id ?? ""} disabled className="bg-muted font-mono text-xs" />
             </div>
             <div className="space-y-2">
               <Label>{t("profile.displayName")}</Label>

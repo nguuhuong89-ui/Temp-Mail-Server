@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
+import crypto from "node:crypto";
 import { db, usersTable, apiKeysTable, inboxesTable, domainsTable, emailsTable, auditLogsTable } from "@workspace/db";
-import { eq, sql, desc, inArray } from "drizzle-orm";
-import { invalidateUserCache } from "../middlewares/clerk-auth";
+import { eq, sql, desc, inArray, isNull } from "drizzle-orm";
+import { invalidateUserCache } from "../middlewares/session-auth";
 import { invalidateDomainCache } from "../lib/domain-cache";
 import { logAudit } from "../lib/audit";
-import { type AuthedRequest, ROLES } from "../middlewares/clerk-auth";
+import { type AuthedRequest, ROLES } from "../middlewares/session-auth";
 
 const router: IRouter = Router();
 
@@ -71,34 +72,27 @@ router.post("/users/sync", async (_req, res) => {
   res.json({ total: rows.length });
 });
 
-// POST /users/promote — set role=admin (and plan=pro) by email
+// POST /users/promote — set role=admin (and plan=pro) by user ID
 router.post("/users/promote", async (req, res) => {
-  const { email, role } = req.body ?? {};
-  if (typeof email !== "string" || !email) {
-    res.status(400).json({ error: "email required" }); return;
+  const { userId, role } = req.body ?? {};
+  if (typeof userId !== "string" || !userId) {
+    res.status(400).json({ error: "userId required" }); return;
   }
   const targetRole = role === "user" ? "user" : "admin";
   const targetPlan = targetRole === "admin" ? "pro" : "free";
 
-  // Find user by email in DB
-  const rows = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(eq(sql`lower(${usersTable.email})`, email.trim().toLowerCase()));
-
-  if (rows.length === 0) {
-    res.status(404).json({ error: "User not found" }); return;
-  }
-
   const [row] = await db
     .update(usersTable)
     .set({ role: targetRole, plan: targetPlan, updatedAt: new Date() })
-    .where(eq(sql`lower(${usersTable.email})`, email.trim().toLowerCase()))
+    .where(eq(usersTable.id, userId.trim()))
     .returning();
 
-  if (row) invalidateUserCache(row.id);
+  if (!row) {
+    res.status(404).json({ error: "User not found" }); return;
+  }
+  invalidateUserCache(row.id);
   if (targetPlan === "free") invalidateDomainCache();
-  res.json({ ok: true, id: row?.id, email: row?.email, role: targetRole, plan: targetPlan });
+  res.json({ ok: true, id: row.id, role: targetRole, plan: targetPlan });
 });
 
 // DELETE /users/:id — remove user + all their data
@@ -125,7 +119,7 @@ router.delete("/users/:id", async (req, res) => {
   if (!deleted) { res.status(404).json({ error: "User not found" }); return; }
   invalidateUserCache(id);
   invalidateDomainCache();
-  await logAudit({ action: "user.delete", actorId: r.userId ?? "admin", targetType: "user", targetId: id, metadata: { email: deleted.email }, req });
+  await logAudit({ action: "user.delete", actorId: r.userId ?? "admin", targetType: "user", targetId: id, metadata: { deletedUserId: deleted.id, displayName: deleted.displayName }, req });
   res.json({ ok: true, deleted: id });
 });
 
@@ -234,6 +228,54 @@ router.get("/users/:id/detail", async (req, res) => {
       createdAt: a.createdAt.toISOString(),
     })),
   });
+});
+
+// POST /users/generate-codes — assign auth_code to existing users who don't have one
+const CODE_CHARS = "abcdefghjkmnpqrstuvwxyz";
+const CODE_LENGTH = 20;
+
+function generateCode(): string {
+  const bytes = crypto.randomBytes(CODE_LENGTH);
+  let code = "";
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    code += CODE_CHARS[bytes[i]! % CODE_CHARS.length];
+  }
+  return code;
+}
+
+function formatCode(raw: string): string {
+  return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}-${raw.slice(12, 16)}-${raw.slice(16, 20)}`;
+}
+
+router.post("/users/generate-codes", async (req, res) => {
+  const r = req as AuthedRequest;
+  const usersWithoutCode = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(isNull(usersTable.authCode));
+
+  if (usersWithoutCode.length === 0) {
+    res.json({ ok: true, generated: 0, users: [] });
+    return;
+  }
+
+  const results: Array<{ id: string; code: string }> = [];
+  for (const user of usersWithoutCode) {
+    const code = generateCode();
+    await db.update(usersTable).set({ authCode: code }).where(eq(usersTable.id, user.id));
+    results.push({ id: user.id, code: formatCode(code) });
+  }
+
+  await logAudit({
+    action: "admin.generate_codes",
+    actorId: r.userId ?? "admin",
+    targetType: "bulk",
+    targetId: String(results.length),
+    metadata: { count: results.length },
+    req,
+  });
+
+  res.json({ ok: true, generated: results.length, users: results });
 });
 
 export default router;

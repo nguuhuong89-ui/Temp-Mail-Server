@@ -72,12 +72,8 @@ ADMIN_TOKEN=<output of: openssl rand -hex 32>
 ### Step 3 — Build and start
 
 ```bash
-# If using Clerk, pass keys as build args:
-docker compose build \
-  --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_live_... \
-  --build-arg VITE_CLERK_PROXY_URL=https://mail.yourdomain.com/api/__clerk
-
-# Start everything
+# Build and start
+docker compose build
 docker compose up -d
 
 # Check status
@@ -121,13 +117,6 @@ Then access Coolify at `http://your-server-ip:8000`.
 3. **Branch**: `main`
 4. **Docker Compose File**: `docker-compose.yml`
 
-In Coolify's **Build Arguments** panel:
-
-```
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
-VITE_CLERK_PROXY_URL=https://mail.yourdomain.com/api/__clerk
-```
-
 > **Note**: Docker images are also automatically built on every push to `main` via GitHub Actions and published to GHCR (`ghcr.io/nguuhuong89-ui/temp-mail-server-api` and `temp-mail-server-web`). Use `docker-compose.coolify.yml` if deploying on a VPS without Coolify to pull pre-built images instead of building from source.
 
 #### Environment Variables
@@ -145,11 +134,7 @@ SMTP_PORT=25
 SMTP_HOST_PORT=25
 HTTP_PORT=80
 LOG_LEVEL=info
-# Optional Clerk:
-CLERK_SECRET_KEY=sk_live_...
-CLERK_PUBLISHABLE_KEY=pk_live_...
-VITE_CLERK_PROXY_URL=https://mail.yourdomain.com/api/__clerk
-ADMIN_EMAILS=you@yourdomain.com
+
 ```
 
 #### Port Mappings
@@ -191,9 +176,7 @@ Set at minimum:
 DATABASE_URL=postgres://tempmail:STRONG_PASSWORD@postgres:5432/tempmail
 MAIL_DOMAIN=mail.yourdomain.com
 ADMIN_TOKEN=<output of: openssl rand -hex 32>
-CLERK_SECRET_KEY=sk_live_...
-CLERK_PUBLISHABLE_KEY=pk_live_...
-ADMIN_EMAILS=you@yourdomain.com
+
 ```
 
 ### Step 3 — Start with pre-built images
@@ -217,8 +200,6 @@ docker compose -f docker-compose.coolify.yml pull
 docker compose -f docker-compose.coolify.yml up -d --force-recreate
 ```
 
-> **GitHub Actions secrets** (for image building): Set `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_CLERK_PROXY_URL` in repo → Settings → Secrets → Actions.
-
 > **Note**: This method does NOT work with Coolify due to Traefik routing limitations. For Coolify, use Option B (build from source).
 
 ---
@@ -241,15 +222,8 @@ docker run -d --name automail-postgres \
   postgres:16-alpine
 
 # 3. Build images
-docker build --target api \
-  --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_live_... \
-  --build-arg VITE_CLERK_PROXY_URL=https://mail.yourdomain.com/api/__clerk \
-  -t automail-api .
-
-docker build --target web \
-  --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_live_... \
-  --build-arg VITE_CLERK_PROXY_URL=https://mail.yourdomain.com/api/__clerk \
-  -t automail-web .
+docker build --target api -t automail-api .
+docker build --target web -t automail-web .
 
 # 4. Start API
 docker run -d --name automail-api \

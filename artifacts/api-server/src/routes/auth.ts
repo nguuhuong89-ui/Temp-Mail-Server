@@ -5,7 +5,7 @@ import { db, usersTable, sessionsTable } from "@workspace/db";
 import { eq, and, lt } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { checkAdminToken, isAdminAuthConfigured } from "../middlewares/admin-auth";
-import { type AuthedRequest, requireUser } from "../middlewares/clerk-auth";
+import { type AuthedRequest, requireUser } from "../middlewares/session-auth";
 
 const router: IRouter = Router();
 

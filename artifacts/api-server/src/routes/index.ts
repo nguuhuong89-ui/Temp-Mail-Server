@@ -19,7 +19,7 @@ import adminHealthRouter from "./admin-health";
 import dataExportRouter from "./data-export";
 import publicRouter from "./public";
 import { adminAuth } from "../middlewares/admin-auth";
-import { attachUser } from "../middlewares/clerk-auth";
+import { attachUser } from "../middlewares/session-auth";
 
 const router: IRouter = Router();
 
@@ -32,7 +32,7 @@ router.use(publicAdsRouter);
 // Public API for AI agents / external integrations (auth via X-API-Key)
 router.use(v1Router);
 
-// Authenticated user (Clerk) endpoints
+// Authenticated user endpoints
 router.use(accountRouter);
 router.use(webhooksRouter);
 router.use(dataExportRouter);

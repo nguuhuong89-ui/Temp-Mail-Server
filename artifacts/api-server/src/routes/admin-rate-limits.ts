@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { getRateLimitStats, getEffectiveLimits, setCustomLimits, type RateLimitConfig } from "../lib/rate-limiter";
 import { logAudit } from "../lib/audit";
-import type { AuthedRequest } from "../middlewares/clerk-auth";
+import type { AuthedRequest } from "../middlewares/session-auth";
 
 const router: IRouter = Router();
 

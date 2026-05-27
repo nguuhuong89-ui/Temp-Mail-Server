@@ -88,7 +88,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
       <div className="px-4 py-3 border-b text-sm">
         <div className="font-medium truncate" data-testid="account-email">
-          {user?.displayName || user?.email || user?.id?.slice(0, 12)}
+          {user?.displayName || user?.id?.slice(0, 16)}
         </div>
         <div className="mt-1 flex items-center gap-2">
           {me?.plan === "pro" ? (
