@@ -292,8 +292,9 @@ export default function Home() {
   }, [publicDomains, customDomainId]);
 
   const autoSave = useCallback((addr: string) => {
+    if (!isSignedIn) return;
     setSavedEmails((prev) => [addr, ...prev.filter((e) => e !== addr)].slice(0, 20));
-  }, [setSavedEmails]);
+  }, [setSavedEmails, isSignedIn]);
 
   const handleGenerate = () => {
     const domainId = selectedDomainId ? parseInt(selectedDomainId, 10) : undefined;
@@ -636,25 +637,7 @@ export default function Home() {
                   : <Mail className="h-3.5 w-3.5 mr-1" />}
                 {t("home.generateNew")}
               </Button>
-              <Button
-                size="sm"
-                className="bg-emerald-500 hover:bg-emerald-400 text-white border-0 shadow-sm shadow-emerald-500/30 font-semibold"
-                onClick={() => {
-                  const domainIdToUse = selectedDomainId || (Array.isArray(publicDomains) && publicDomains.length > 0 ? String(publicDomains[0].id) : "");
-                  if (domainIdToUse) setCustomDomainId(domainIdToUse);
-                  setCustomDialogOpen(true);
-                }}
-              >
-                <Wand2 className="h-3.5 w-3.5 mr-1" /> {t("home.createCustom")}
-              </Button>
-              <Button
-                size="sm"
-                className="bg-rose-500 hover:bg-rose-400 text-white border-0 shadow-sm shadow-rose-500/30 font-semibold"
-                onClick={handleDeleteAll}
-                disabled={!address || clearEmails.isPending || totalEmails === 0}
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("home.deleteAll")}
-              </Button>
+
               {address && (
                 <Button
                   size="sm"
