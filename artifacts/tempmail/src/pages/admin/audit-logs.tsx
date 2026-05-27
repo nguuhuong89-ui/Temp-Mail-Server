@@ -14,7 +14,7 @@ type AuditLog = {
   id: number;
   action: string;
   actorId: string;
-  actorEmail: string | null;
+  actorDisplayName: string | null;
   targetType: string | null;
   targetId: string | null;
   metadata: Record<string, unknown> | null;
@@ -137,7 +137,7 @@ export default function AdminAuditLogs() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs font-mono">{log.actorEmail ?? log.actorId.slice(0, 16)}</span>
+                        <span className="text-xs font-mono">{log.actorDisplayName ?? log.actorId.slice(0, 16)}</span>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {log.targetType && <span className="text-xs">{log.targetType}{log.targetId ? `:${log.targetId.slice(0, 12)}` : ""}</span>}
@@ -202,7 +202,7 @@ export default function AdminAuditLogs() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Actor</div>
-                  <div className="font-mono text-sm">{selected.actorEmail ?? selected.actorId}</div>
+                  <div className="font-mono text-sm">{selected.actorDisplayName ?? selected.actorId}</div>
                 </div>
                 {selected.targetType && (
                   <div>
