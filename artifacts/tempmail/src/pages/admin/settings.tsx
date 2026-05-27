@@ -126,14 +126,20 @@ export default function AdminSettings() {
               </Label>
               <div className="flex items-center gap-3">
                 <Input
-                  type="number" min={1} max={90} value={retainDays}
-                  onChange={(e) => setRetainDays(Math.max(1, Math.min(90, Number(e.target.value))))}
+                  type="number" min={1} max={365} value={retainDays}
+                  onChange={(e) => setRetainDays(Math.max(1, Math.min(365, Number(e.target.value))))}
                   className="w-28 font-mono"
                 />
-                <span className="text-sm text-muted-foreground">days (1–90 days)</span>
+                <span className="text-sm text-muted-foreground">days (1–365 days)</span>
+              </div>
+              <div className="flex gap-2 mt-1">
+                <button onClick={() => setRetainDays(7)} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${retainDays === 7 ? "bg-indigo-500 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>7 days</button>
+                <button onClick={() => setRetainDays(14)} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${retainDays === 14 ? "bg-indigo-500 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>14 days</button>
+                <button onClick={() => setRetainDays(30)} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${retainDays === 30 ? "bg-indigo-500 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>30 days</button>
+                <button onClick={() => setRetainDays(90)} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${retainDays === 90 ? "bg-indigo-500 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"}`}>90 days</button>
               </div>
               <p className="text-xs text-muted-foreground">
-                All emails older than this limit will be deleted on the next cleanup run (every 5 minutes). Default: 7 days.
+                All emails older than this limit will be deleted on the next cleanup run (every 5 minutes). Default: 14 days.
               </p>
             </div>
           </div>

@@ -125,5 +125,15 @@ export async function initDb(): Promise<void> {
       created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS webhooks_user_idx ON webhooks (user_id);
+
+    CREATE TABLE IF NOT EXISTS saved_inboxes (
+      id         SERIAL PRIMARY KEY,
+      user_id    TEXT NOT NULL,
+      address    TEXT NOT NULL,
+      label      TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(user_id, address)
+    );
+    CREATE INDEX IF NOT EXISTS saved_inboxes_user_idx ON saved_inboxes (user_id);
   `);
 }

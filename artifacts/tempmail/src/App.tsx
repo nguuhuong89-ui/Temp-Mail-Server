@@ -32,6 +32,7 @@ import AdminAuditLogs from "@/pages/admin/audit-logs";
 import AdminSystemHealth from "@/pages/admin/system-health";
 import AdminRateLimits from "@/pages/admin/rate-limits";
 import AccountProfile from "@/pages/account/profile";
+import AccountSavedInboxes from "@/pages/account/saved-inboxes";
 import AccountWebhooks from "@/pages/account/webhooks";
 import DocsPage from "@/pages/docs";
 import AcceptableUsePage from "@/pages/acceptable-use";
@@ -122,6 +123,7 @@ function Router() {
       <Route path="/account/profile" component={AccountProfile} />
       <Route path="/account/webhooks" component={AccountWebhooks} />
       <Route path="/account/inboxes" component={AccountInboxes} />
+      <Route path="/account/saved-inboxes" component={AccountSavedInboxes} />
       <Route path="/account/api-keys" component={AccountApiKeys} />
       <Route path="/account/domains" component={AccountDomains} />
       <Route path="/account/plan" component={AccountPlan} />

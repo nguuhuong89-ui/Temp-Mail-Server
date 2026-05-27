@@ -23,11 +23,12 @@ import { useToast } from "@/hooks/use-toast";
 import { AdRenderer } from "@/components/ad-renderer";
 import { Link, useParams, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api-fetch";
 import { useQuery } from "@tanstack/react-query";
+import { useUser } from "@clerk/react";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 const AUTO_ROTATE_MS = 10 * 60 * 1000;
@@ -161,6 +162,7 @@ export default function Home() {
   const address = params.address || localAddress;
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isSignedIn } = useUser();
 
   const { data: inbox, isLoading, isFetching } = useGetInbox(address || "", {
     query: { enabled: !!address, queryKey: getGetInboxQueryKey(address || "") },
@@ -391,6 +393,11 @@ export default function Home() {
     openAdWall(doExtend);
   };
 
+  const saveToServer = useMutation({
+    mutationFn: (addr: string) => apiFetch("/api/account/saved-inboxes", { method: "POST", body: JSON.stringify({ address: addr }) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/account/saved-inboxes"] }); },
+  });
+
   const handleSaveEmail = () => {
     if (!address) return;
     if (isSaved) {
@@ -400,6 +407,7 @@ export default function Home() {
     }
     openAdWall(() => {
       setSavedEmails([address, ...savedEmails.filter((e) => e !== address)]);
+      if (isSignedIn) saveToServer.mutate(address);
       toast({ title: t("home.savedToast"), description: address });
     });
   };
