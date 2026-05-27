@@ -14,6 +14,7 @@ router.get("/users", async (_req, res) => {
     .select({
       id: usersTable.id,
       email: usersTable.email,
+      displayName: usersTable.displayName,
       plan: usersTable.plan,
       role: usersTable.role,
       createdAt: usersTable.createdAt,
@@ -59,7 +60,7 @@ router.patch("/users/:id", async (req, res) => {
   await logAudit({ action: "user.update", actorId: r.userId ?? "admin", targetType: "user", targetId: id, metadata: { plan: row.plan, role: row.role }, req });
   res.json({
     id: row.id,
-    email: row.email,
+    displayName: row.displayName,
     plan: row.plan,
     role: row.role,
     updatedAt: row.updatedAt.toISOString(),

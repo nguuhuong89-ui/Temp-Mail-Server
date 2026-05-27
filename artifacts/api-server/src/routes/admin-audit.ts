@@ -38,7 +38,7 @@ router.get("/audit-logs", async (req, res) => {
         metadata: auditLogsTable.metadata,
         ipAddress: auditLogsTable.ipAddress,
         createdAt: auditLogsTable.createdAt,
-        actorEmail: usersTable.email,
+        actorDisplayName: usersTable.displayName,
       })
       .from(auditLogsTable)
       .leftJoin(usersTable, eq(auditLogsTable.actorId, usersTable.id))
@@ -57,7 +57,7 @@ router.get("/audit-logs", async (req, res) => {
       id: r.id,
       action: r.action,
       actorId: r.actorId,
-      actorEmail: r.actorEmail ?? null,
+      actorDisplayName: r.actorDisplayName ?? null,
       targetType: r.targetType,
       targetId: r.targetId,
       metadata: r.metadata,

@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 type AdminUser = {
   id: string;
   email: string | null;
+  displayName: string | null;
   plan: "free" | "pro";
   role: "user" | "admin";
   createdAt: string;
@@ -51,7 +52,7 @@ function Avatar({ user }: { user: AdminUser }) {
         ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300"
         : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
     }`}>
-      {(user.id.slice(4, 5) || "?").toUpperCase()}
+      {(user.displayName?.[0] ?? user.id.slice(4, 5) ?? "?").toUpperCase()}
     </div>
   );
 }
@@ -87,7 +88,7 @@ export default function AdminUsers() {
       if (filterRole !== "all" && u.role !== filterRole) return false;
       if (search) {
         const q = search.toLowerCase();
-        if (!u.id.toLowerCase().includes(q) && !(u.email ?? "").toLowerCase().includes(q)) return false;
+        if (!u.id.toLowerCase().includes(q) && !(u.displayName ?? "").toLowerCase().includes(q)) return false;
       }
       return true;
     });
@@ -180,7 +181,7 @@ export default function AdminUsers() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               className="pl-8 h-8 text-sm"
-              placeholder="Search by user ID…"
+              placeholder="Search by user ID or name…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -236,7 +237,7 @@ export default function AdminUsers() {
                   <div className="flex items-center gap-2 min-w-0">
                     <Avatar user={u} />
                     <span className="text-sm font-medium truncate">
-                      <span className="font-mono text-xs">{u.id}</span>
+                      {u.displayName ? <span className="text-sm">{u.displayName}</span> : <span className="font-mono text-xs">{u.id.slice(0, 16)}</span>}
                     </span>
                   </div>
                   <div onClick={(e) => e.stopPropagation()}>
@@ -323,7 +324,7 @@ export default function AdminUsers() {
         onDelete={(u) => setDeleteTarget(u)}
       />
 
-      {/* Promote by email dialog */}
+      {/* Promote by User ID dialog */}
       <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
