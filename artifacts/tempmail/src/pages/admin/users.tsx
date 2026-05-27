@@ -51,7 +51,7 @@ function Avatar({ user }: { user: AdminUser }) {
         ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300"
         : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
     }`}>
-      {(user.email?.[0] ?? "?").toUpperCase()}
+      {(user.id.slice(4, 5) || "?").toUpperCase()}
     </div>
   );
 }
@@ -70,7 +70,7 @@ export default function AdminUsers() {
 
   // Promote dialog
   const [promoteOpen, setPromoteOpen] = useState(false);
-  const [promoteEmail, setPromoteEmail] = useState("");
+  const [promoteUserId, setPromoteUserId] = useState("");
 
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -87,7 +87,7 @@ export default function AdminUsers() {
       if (filterRole !== "all" && u.role !== filterRole) return false;
       if (search) {
         const q = search.toLowerCase();
-        if (!u.email?.toLowerCase().includes(q) && !u.id.toLowerCase().includes(q)) return false;
+        if (!u.id.toLowerCase().includes(q) && !(u.email ?? "").toLowerCase().includes(q)) return false;
       }
       return true;
     });
@@ -114,13 +114,13 @@ export default function AdminUsers() {
   });
 
   const promote = useMutation({
-    mutationFn: (email: string) =>
-      apiFetch("/api/admin/users/promote", { method: "POST", body: JSON.stringify({ email }) }),
+    mutationFn: (userId: string) =>
+      apiFetch("/api/admin/users/promote", { method: "POST", body: JSON.stringify({ userId }) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/admin/users"] });
       toast({ title: "Admin role assigned" });
       setPromoteOpen(false);
-      setPromoteEmail("");
+      setPromoteUserId("");
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -180,7 +180,7 @@ export default function AdminUsers() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               className="pl-8 h-8 text-sm"
-              placeholder="Search by email or ID…"
+              placeholder="Search by user ID…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -211,7 +211,7 @@ export default function AdminUsers() {
         {/* Table */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="grid grid-cols-[1fr_85px_85px_55px_55px_55px_100px_auto] gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            <span>Email</span><span>Plan</span><span>Role</span>
+            <span>User</span><span>Plan</span><span>Role</span>
             <span className="text-center">Inbox</span><span className="text-center">Keys</span><span className="text-center">Domain</span>
             <span>Created</span><span className="text-right">Actions</span>
           </div>
@@ -236,7 +236,7 @@ export default function AdminUsers() {
                   <div className="flex items-center gap-2 min-w-0">
                     <Avatar user={u} />
                     <span className="text-sm font-medium truncate">
-                      {u.email ?? <span className="text-muted-foreground italic text-xs">no email</span>}
+                      <span className="font-mono text-xs">{u.id}</span>
                     </span>
                   </div>
                   <div onClick={(e) => e.stopPropagation()}>
@@ -328,23 +328,24 @@ export default function AdminUsers() {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4 text-violet-500" /> Add Admin by email
+              <UserPlus className="h-4 w-4 text-violet-500" /> Add Admin by User ID
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <p className="text-sm text-muted-foreground">Enter the user ID to add.</p>
+            <p className="text-sm text-muted-foreground">Enter the user ID to promote to admin.</p>
             <Input
-              placeholder="email@example.com"
-              value={promoteEmail}
-              onChange={(e) => setPromoteEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && promoteEmail.trim() && promote.mutate(promoteEmail.trim())}
+              placeholder="usr_xxxxxxxxxxxx"
+              value={promoteUserId}
+              onChange={(e) => setPromoteUserId(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && promoteUserId.trim() && promote.mutate(promoteUserId.trim())}
+              className="font-mono text-sm"
             />
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setPromoteOpen(false)}>Cancel</Button>
             <Button size="sm" className="bg-violet-600 hover:bg-violet-500 text-white border-0"
-              disabled={!promoteEmail.trim() || promote.isPending}
-              onClick={() => promote.mutate(promoteEmail.trim())}>
+              disabled={!promoteUserId.trim() || promote.isPending}
+              onClick={() => promote.mutate(promoteUserId.trim())}>
               {promote.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Shield className="h-3.5 w-3.5" />}
               Set Admin
             </Button>
@@ -361,7 +362,7 @@ export default function AdminUsers() {
             </DialogTitle>
           </DialogHeader>
           <div className="py-2 space-y-2">
-            <p className="text-sm">Are you sure you want to delete <strong>{deleteTarget?.email}</strong>?</p>
+            <p className="text-sm">Are you sure you want to delete <strong className="font-mono text-xs">{deleteTarget?.id}</strong>?</p>
             <p className="text-xs text-muted-foreground">This will permanently delete all inboxes, emails, API keys and domains. Cannot be undone.</p>
           </div>
           <DialogFooter>
@@ -407,12 +408,10 @@ function UserDetailDrawer({
                 <Avatar user={selected} />
                 <div className="flex-1 min-w-0">
                   <SheetTitle className="text-base truncate">
-                    {detail?.user.displayName ?? selected.email ?? "no email"}
+                    {detail?.user.displayName ?? selected.id}
                   </SheetTitle>
                   <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">{selected.id}</p>
-                  {detail?.user.displayName && selected.email && (
-                    <p className="text-xs text-muted-foreground truncate">{selected.email}</p>
-                  )}
+
                 </div>
               </div>
             </SheetHeader>

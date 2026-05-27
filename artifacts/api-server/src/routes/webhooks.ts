@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, webhooksTable } from "@workspace/db";
 import { and, eq, desc } from "drizzle-orm";
 import crypto from "node:crypto";
-import { attachUser, requireUser, requirePro, type AuthedRequest } from "../middlewares/clerk-auth";
+import { attachUser, requireUser, requirePro, type AuthedRequest } from "../middlewares/session-auth";
 
 const router: IRouter = Router();
 

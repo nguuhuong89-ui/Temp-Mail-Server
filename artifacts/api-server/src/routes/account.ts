@@ -4,7 +4,7 @@ import { and, eq, desc, sql, isNull } from "drizzle-orm";
 import { generateApiKey } from "../lib/api-key-auth";
 import { verifyDomainMx } from "../lib/domain-verify";
 import { invalidateDomainCache } from "../lib/domain-cache";
-import { attachUser, requireUser, requirePro, type AuthedRequest } from "../middlewares/clerk-auth";
+import { attachUser, requireUser, requirePro, type AuthedRequest } from "../middlewares/session-auth";
 
 const router: IRouter = Router();
 

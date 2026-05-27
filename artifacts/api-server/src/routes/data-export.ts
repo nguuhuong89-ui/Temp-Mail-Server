@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, inboxesTable, emailsTable, domainsTable, apiKeysTable, auditLogsTable, webhooksTable } from "@workspace/db";
 import { eq, desc, sql } from "drizzle-orm";
-import { attachUser, requireUser, type AuthedRequest } from "../middlewares/clerk-auth";
+import { attachUser, requireUser, type AuthedRequest } from "../middlewares/session-auth";
 import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();

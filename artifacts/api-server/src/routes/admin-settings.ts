@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { runtimeSettings } from "../lib/runtime-settings";
 import { logAudit } from "../lib/audit";
-import type { AuthedRequest } from "../middlewares/clerk-auth";
+import type { AuthedRequest } from "../middlewares/session-auth";
 
 const router: IRouter = Router();
 

@@ -6,7 +6,7 @@ import pinoHttp from "pino-http";
 import cookieParser from "cookie-parser";
 import router from "./routes";
 import authRouter from "./routes/auth";
-import { attachUser } from "./middlewares/clerk-auth";
+import { attachUser } from "./middlewares/session-auth";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
