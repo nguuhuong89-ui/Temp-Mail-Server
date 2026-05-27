@@ -10,29 +10,34 @@ import { type AuthedRequest, ROLES } from "../middlewares/session-auth";
 const router: IRouter = Router();
 
 router.get("/users", async (_req, res) => {
-  const rows = await db
-    .select({
-      id: usersTable.id,
-      email: usersTable.email,
-      displayName: usersTable.displayName,
-      plan: usersTable.plan,
-      role: usersTable.role,
-      createdAt: usersTable.createdAt,
-      apiKeyCount: sql<number>`(select count(*) from ${apiKeysTable} where ${apiKeysTable.userId} = ${usersTable.id})::int`,
-      inboxCount: sql<number>`(select count(*) from ${inboxesTable} where ${inboxesTable.ownerUserId} = ${usersTable.id})::int`,
-      domainCount: sql<number>`(select count(*) from ${domainsTable} where ${domainsTable.userId} = ${usersTable.id})::int`,
-    })
-    .from(usersTable)
-    .orderBy(desc(usersTable.createdAt));
-  res.json(
-    rows.map((u) => ({
-      ...u,
-      createdAt: u.createdAt.toISOString(),
-      apiKeyCount: Number(u.apiKeyCount ?? 0),
-      inboxCount: Number(u.inboxCount ?? 0),
-      domainCount: Number(u.domainCount ?? 0),
-    })),
-  );
+  try {
+    const rows = await db
+      .select({
+        id: usersTable.id,
+        email: usersTable.email,
+        displayName: usersTable.displayName,
+        plan: usersTable.plan,
+        role: usersTable.role,
+        createdAt: usersTable.createdAt,
+        apiKeyCount: sql<number>`(select count(*) from ${apiKeysTable} where ${apiKeysTable.userId} = ${usersTable.id})::int`,
+        inboxCount: sql<number>`(select count(*) from ${inboxesTable} where ${inboxesTable.ownerUserId} = ${usersTable.id})::int`,
+        domainCount: sql<number>`(select count(*) from ${domainsTable} where ${domainsTable.userId} = ${usersTable.id})::int`,
+      })
+      .from(usersTable)
+      .orderBy(desc(usersTable.createdAt));
+    res.json(
+      rows.map((u) => ({
+        ...u,
+        createdAt: u.createdAt.toISOString(),
+        apiKeyCount: Number(u.apiKeyCount ?? 0),
+        inboxCount: Number(u.inboxCount ?? 0),
+        domainCount: Number(u.domainCount ?? 0),
+      })),
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: "Failed to fetch users", detail: message });
+  }
 });
 
 router.patch("/users/:id", async (req, res) => {
