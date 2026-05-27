@@ -87,12 +87,8 @@ services:
       - api
     expose:
       - "80"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz > /dev/null 2>&1 || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+    # Note: no healthcheck here — Traefik relies on container being "running".
+    # The nginx proxy timeouts (5s connect) prevent hanging on stale api connections.
     networks:
       - default
       - coolify
