@@ -207,13 +207,15 @@ router.get("/account/saved-inboxes", requireUser, async (req, res) => {
       address: savedInboxesTable.address,
       label: savedInboxesTable.label,
       savedAt: savedInboxesTable.createdAt,
+      inboxCreatedAt: inboxesTable.createdAt,
       emailCount: sql<number>`count(${emailsTable.id})::int`,
       lastEmailAt: sql<string | null>`max(${emailsTable.receivedAt})::text`,
     })
     .from(savedInboxesTable)
+    .leftJoin(inboxesTable, eq(inboxesTable.address, savedInboxesTable.address))
     .leftJoin(emailsTable, eq(emailsTable.toAddress, savedInboxesTable.address))
     .where(eq(savedInboxesTable.userId, r.userId!))
-    .groupBy(savedInboxesTable.id)
+    .groupBy(savedInboxesTable.id, inboxesTable.createdAt)
     .orderBy(desc(savedInboxesTable.createdAt))
     .limit(100);
   res.json(
@@ -222,6 +224,7 @@ router.get("/account/saved-inboxes", requireUser, async (req, res) => {
       address: r.address,
       label: r.label,
       savedAt: r.savedAt.toISOString(),
+      inboxCreatedAt: r.inboxCreatedAt?.toISOString() ?? null,
       emailCount: Number(r.emailCount ?? 0),
       lastEmailAt: r.lastEmailAt ?? null,
     })),

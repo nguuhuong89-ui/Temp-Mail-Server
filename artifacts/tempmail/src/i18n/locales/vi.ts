@@ -147,6 +147,7 @@ const vi: Translations = {
     expired: "Hết hạn",
     savedInboxes: "Inbox đã lưu",
     savedInboxesDesc: "Các inbox bạn đã lưu lại để truy cập nhanh. Đồng bộ với tài khoản.",
+    inboxCreatedAt: "Ngày tạo",
     savedAt: "Đã lưu",
     lastEmail: "Email cuối",
     label: "Nhãn",
