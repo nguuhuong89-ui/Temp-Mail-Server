@@ -1,27 +1,7 @@
 #!/bin/sh
-# Custom entrypoint: starts nginx, then periodically checks if the
-# api upstream is reachable. If not, reloads nginx to refresh DNS.
-# This fixes the recurring hang caused by stale DNS after API restarts.
+# nginx entrypoint with dynamic DNS resolution.
+# The resolver directive in nginx.conf uses Docker's internal DNS (127.0.0.11)
+# with a 5s TTL, so nginx automatically re-resolves the API hostname after
+# container restarts — no watchdog needed.
 
-set -e
-
-# Start nginx in background
-nginx -g 'daemon off;' &
-NGINX_PID=$!
-
-# Wait for nginx to start
-sleep 2
-
-# Watchdog loop: every 30s, check if api is reachable via our proxy
-while kill -0 $NGINX_PID 2>/dev/null; do
-  sleep 30
-  # Quick check: can nginx reach the API?
-  if ! wget -qO /dev/null --timeout=3 http://localhost/api/healthz 2>/dev/null; then
-    echo "[watchdog] API unreachable via proxy, reloading nginx to refresh DNS..."
-    nginx -s reload 2>/dev/null || true
-    sleep 5
-  fi
-done
-
-# If nginx exits, exit the container
-wait $NGINX_PID
+exec nginx -g 'daemon off;'
