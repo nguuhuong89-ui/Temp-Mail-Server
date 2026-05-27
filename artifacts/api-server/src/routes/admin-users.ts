@@ -19,9 +19,9 @@ router.get("/users", async (_req, res) => {
         plan: usersTable.plan,
         role: usersTable.role,
         createdAt: usersTable.createdAt,
-        apiKeyCount: sql<number>`(select count(*) from ${apiKeysTable} where ${apiKeysTable.userId} = ${usersTable.id})::int`,
-        inboxCount: sql<number>`(select count(*) from ${inboxesTable} where ${inboxesTable.ownerUserId} = ${usersTable.id})::int`,
-        domainCount: sql<number>`(select count(*) from ${domainsTable} where ${domainsTable.userId} = ${usersTable.id})::int`,
+        apiKeyCount: sql<number>`(select count(*)::int from api_keys where api_keys.user_id = users.id)`,
+        inboxCount: sql<number>`(select count(*)::int from inboxes where inboxes.owner_user_id = users.id)`,
+        domainCount: sql<number>`(select count(*)::int from domains where domains.user_id = users.id)`,
       })
       .from(usersTable)
       .orderBy(desc(usersTable.createdAt));
@@ -142,7 +142,7 @@ router.get("/users/:id/detail", async (req, res) => {
         address: inboxesTable.address,
         createdAt: inboxesTable.createdAt,
         expiresAt: inboxesTable.expiresAt,
-        emailCount: sql<number>`(SELECT count(*)::int FROM emails WHERE to_address = ${inboxesTable.address})`,
+        emailCount: sql<number>`(SELECT count(*)::int FROM emails WHERE emails.to_address = inboxes.address)`,
       })
       .from(inboxesTable)
       .where(eq(inboxesTable.ownerUserId, id))
