@@ -17,6 +17,7 @@ const en = {
   home: {
     emailLabel: "Email:",
     emailPlaceholder: "enter any email, e.g. alice@mail.vnsi.app",
+    usernamePlaceholder: "enter username, e.g. alice",
     urlLabel: "Email URL:",
     online: "● Online",
     offline: "○ Offline",

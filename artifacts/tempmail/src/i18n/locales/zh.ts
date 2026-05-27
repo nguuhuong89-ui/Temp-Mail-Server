@@ -19,6 +19,7 @@ const zh: Translations = {
   home: {
     emailLabel: "邮箱:",
     emailPlaceholder: "输入任意邮箱, 例如: alice@mail.vnsi.app",
+    usernamePlaceholder: "输入用户名, 例如: alice",
     urlLabel: "邮箱 URL:",
     online: "● 在线",
     offline: "○ 离线",

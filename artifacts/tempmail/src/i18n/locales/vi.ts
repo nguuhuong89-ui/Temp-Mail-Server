@@ -19,6 +19,7 @@ const vi: Translations = {
   home: {
     emailLabel: "Email:",
     emailPlaceholder: "nhập email bất kỳ, vd: alice@mail.vnsi.app",
+    usernamePlaceholder: "nhập tên người dùng, vd: alice",
     urlLabel: "URL Email:",
     online: "● Online",
     offline: "○ Offline",

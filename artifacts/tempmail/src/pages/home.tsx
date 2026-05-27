@@ -264,6 +264,23 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [autoRotateCountdown]);
 
+  // Auto-create email for new visitors (no address stored)
+  const autoCreatedRef = useRef(false);
+  useEffect(() => {
+    if (!address && !autoCreatedRef.current && !createRandom.isPending) {
+      autoCreatedRef.current = true;
+      createRandom.mutate(
+        { data: {} },
+        {
+          onSuccess: (data) => {
+            setLocalAddress(data.address);
+            window.history.pushState({}, "", `/inbox/${data.address}`);
+          },
+        },
+      );
+    }
+  }, [address]);
+
   // Keep email input in sync when address changes (generate/custom/navigate)
   useEffect(() => { setEmailInputValue(address || ""); }, [address]);
 
@@ -292,8 +309,30 @@ export default function Home() {
     );
   };
 
+  // Resolve selected domain name
+  const selectedDomain = Array.isArray(publicDomains) ? publicDomains.find((d) => String(d.id) === selectedDomainId) : undefined;
+
   const handleCheckEmail = () => {
     const trimmed = emailInputValue.trim().toLowerCase();
+    // When a domain is selected, treat input as username and create custom inbox
+    if (selectedDomainId && selectedDomain && trimmed && !trimmed.includes("@")) {
+      createCustom.mutate(
+        { data: { localPart: trimmed, domainId: parseInt(selectedDomainId, 10) } },
+        {
+          onSuccess: (data) => {
+            setLocalAddress(data.address);
+            setEmailInputValue(data.address);
+            window.history.pushState({}, "", `/inbox/${data.address}`);
+            autoSave(data.address);
+            toast({ title: t("home.customInboxTitle"), description: data.address });
+          },
+          onError: (e: Error) => {
+            toast({ title: t("home.customCreateError"), description: e.message, variant: "destructive" });
+          },
+        },
+      );
+      return;
+    }
     if (!trimmed || !trimmed.includes("@")) {
       toast({ title: t("home.invalidEmail"), variant: "destructive" });
       return;
@@ -405,11 +444,16 @@ export default function Home() {
       toast({ title: t("home.unsavedToast") });
       return;
     }
-    openAdWall(() => {
+    const doSave = () => {
       setSavedEmails([address, ...savedEmails.filter((e) => e !== address)]);
       if (isSignedIn) saveToServer.mutate(address);
       toast({ title: t("home.savedToast"), description: address });
-    });
+    };
+    if (isSignedIn) {
+      doSave();
+    } else {
+      openAdWall(doSave);
+    }
   };
 
   // TOTP helpers
@@ -503,22 +547,32 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <label className="text-sm font-semibold shrink-0 sm:w-14 text-slate-600 dark:text-slate-400">Email:</label>
               <div className="flex-1 flex items-center gap-2">
-                <input
-                  type="text"
-                  value={emailInputValue}
-                  onChange={(e) => setEmailInputValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleCheckEmail(); }}
-                  placeholder={t("home.emailPlaceholder")}
-                  className="flex-1 px-3 py-2 border border-indigo-200 dark:border-indigo-900/60 rounded-lg text-sm font-mono bg-indigo-50/50 dark:bg-indigo-950/30 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                  spellCheck={false}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                />
+                <div className="flex-1 flex items-center gap-0">
+                  <input
+                    type="text"
+                    value={emailInputValue}
+                    onChange={(e) => setEmailInputValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleCheckEmail(); }}
+                    placeholder={selectedDomainId ? t("home.usernamePlaceholder") : t("home.emailPlaceholder")}
+                    className={`flex-1 px-3 py-2 border border-indigo-200 dark:border-indigo-900/60 text-sm font-mono bg-indigo-50/50 dark:bg-indigo-950/30 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all ${selectedDomainId ? "rounded-l-lg border-r-0" : "rounded-lg"}`}
+                    spellCheck={false}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                  />
+                  {selectedDomain && (
+                    <span className="px-3 py-2 border border-indigo-200 dark:border-indigo-900/60 border-l-0 rounded-r-lg text-sm font-mono bg-indigo-100/60 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 shrink-0">
+                      @{selectedDomain.name}
+                    </span>
+                  )}
+                </div>
                 {/* Domain selector */}
                 {Array.isArray(publicDomains) && publicDomains.length > 0 && (
                   <select
                     value={selectedDomainId}
-                    onChange={(e) => setSelectedDomainId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedDomainId(e.target.value);
+                      if (e.target.value && emailInputValue.includes("@")) setEmailInputValue("");
+                    }}
                     className="px-2 py-2 border border-indigo-200 dark:border-indigo-900/60 rounded-lg text-sm bg-indigo-50/50 dark:bg-indigo-950/30 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all max-w-[200px]"
                   >
                     <option value="">{t("home.allDomains")}</option>
@@ -568,7 +622,8 @@ export default function Home() {
                 onClick={handleCheckEmail}
                 disabled={!emailInputValue.trim() || isFetching}
               >
-                <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isFetching ? "animate-spin" : ""}`} /> {t("home.checkInbox")}
+                {(createCustom.isPending || isFetching) ? <RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+                {selectedDomainId && emailInputValue.trim() && !emailInputValue.includes("@") ? t("home.createCustom") : t("home.checkInbox")}
               </Button>
               <Button
                 size="sm"
@@ -798,8 +853,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Saved Emails Panel */}
-        {savedEmails.length > 0 && (
+        {/* Saved Emails Panel — logged-in users always see it; others only when they have saved */}
+        {(isSignedIn || savedEmails.length > 0) && savedEmails.length > 0 && (
           <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur rounded-xl border border-white/20 shadow-lg shadow-black/20 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-800/40">
               <div className="flex items-center gap-2">
