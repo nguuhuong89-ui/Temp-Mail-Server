@@ -71,8 +71,7 @@ services:
 
   # ---------------------------------------------------------------
   # Web frontend (Nginx serving built React app + API proxy)
-  # Uses dynamic DNS resolution (resolver 127.0.0.11) so nginx
-  # re-resolves the api hostname after container restarts.
+  # Healthcheck tests full proxy path (nginx→api) for auto-recovery.
   # ---------------------------------------------------------------
   web:
     build:
@@ -85,8 +84,7 @@ services:
         VITE_CLERK_PROXY_URL: ${VITE_CLERK_PROXY_URL:-}
     restart: unless-stopped
     depends_on:
-      api:
-        condition: service_healthy
+      - api
     expose:
       - "80"
     healthcheck:
