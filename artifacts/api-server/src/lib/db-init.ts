@@ -135,5 +135,17 @@ export async function initDb(): Promise<void> {
       UNIQUE(user_id, address)
     );
     CREATE INDEX IF NOT EXISTS saved_inboxes_user_idx ON saved_inboxes (user_id);
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS users_auth_code_idx ON users (auth_code);
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      id         TEXT PRIMARY KEY,
+      user_id    TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS sessions_user_idx    ON sessions (user_id);
+    CREATE INDEX IF NOT EXISTS sessions_expires_idx ON sessions (expires_at);
   `);
 }

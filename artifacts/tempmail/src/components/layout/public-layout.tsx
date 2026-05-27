@@ -1,15 +1,14 @@
 import { Link } from "wouter";
 import { Mail, BookOpen, ShieldCheck, AlertTriangle, User as UserIcon, LogIn, MessageCircle } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
-import { Show, UserButton } from "@clerk/react";
+import { useUser } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useTranslation } from "react-i18next";
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
+  const { isSignedIn } = useUser();
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-indigo-950 via-slate-900 to-violet-950 text-foreground selection:bg-violet-500/30">
       {/* Header */}
@@ -42,20 +41,19 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 </Button>
               </Link>
             ))}
-            <Show when="signed-in">
+            {isSignedIn ? (
               <Link href="/account/domains">
                 <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
                   {t("nav.addCustomDomain")}
                 </Button>
               </Link>
-            </Show>
-            <Show when="signed-out">
+            ) : (
               <Link href="/sign-in">
                 <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
                   {t("nav.addCustomDomain")}
                 </Button>
               </Link>
-            </Show>
+            )}
             <a href="mailto:contact@tempmail.local">
               <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2.5 text-xs text-white/70 hover:text-white hover:bg-white/10">
                 <MessageCircle className="h-3.5 w-3.5" /> {t("nav.contact")}
@@ -66,28 +64,28 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           {/* Right: language + auth */}
           <div className="flex items-center gap-1 shrink-0">
             <LanguageSwitcher />
-            <Show when="signed-in">
+            {isSignedIn ? (
               <Link href="/account">
                 <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs text-white/80 hover:text-white hover:bg-white/10">
                   <UserIcon className="h-3.5 w-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">{t("nav.account")}</span>
                 </Button>
               </Link>
-              <UserButton userProfileMode="navigation" userProfileUrl={`${basePath}/account`} />
-            </Show>
-            <Show when="signed-out">
-              <Link href="/sign-in">
-                <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs text-white/80 hover:text-white hover:bg-white/10">
-                  <LogIn className="h-3.5 w-3.5 sm:mr-1" />
-                  <span className="hidden sm:inline">{t("nav.signIn")}</span>
-                </Button>
-              </Link>
-              <Link href="/sign-up">
-                <Button size="sm" className="h-8 px-3 text-xs bg-violet-600 hover:bg-violet-500 border-0 text-white shadow-lg shadow-violet-500/30">
-                  {t("nav.signUp")}
-                </Button>
-              </Link>
-            </Show>
+            ) : (
+              <>
+                <Link href="/sign-in">
+                  <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs text-white/80 hover:text-white hover:bg-white/10">
+                    <LogIn className="h-3.5 w-3.5 sm:mr-1" />
+                    <span className="hidden sm:inline">{t("nav.signIn")}</span>
+                  </Button>
+                </Link>
+                <Link href="/sign-up">
+                  <Button size="sm" className="h-8 px-3 text-xs bg-violet-600 hover:bg-violet-500 border-0 text-white shadow-lg shadow-violet-500/30">
+                    {t("nav.signUp")}
+                  </Button>
+                </Link>
+              </>
+            )}
             <ThemeToggle />
           </div>
         </div>

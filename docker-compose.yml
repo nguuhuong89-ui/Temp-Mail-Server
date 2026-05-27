@@ -45,9 +45,6 @@ services:
       MAIL_DOMAIN: ${MAIL_DOMAIN:-mail.example.com}
       # --- Admin panel token (required — use: openssl rand -hex 32) ---
       ADMIN_TOKEN: ${ADMIN_TOKEN:-change_me}
-      # --- Clerk user accounts (optional — leave empty to disable) ---
-      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
-      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
       # --- Auto-promote emails to admin+pro on first login ---
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       # --- Logging (trace|debug|info|warn|error) ---
@@ -77,11 +74,6 @@ services:
     build:
       context: .
       target: web
-      args:
-        # VITE_ vars are baked into the frontend bundle at build time.
-        # Must be passed as build args — setting them in environment: has no effect.
-        VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
-        VITE_CLERK_PROXY_URL: ${VITE_CLERK_PROXY_URL:-}
     restart: unless-stopped
     depends_on:
       - api

@@ -3,15 +3,10 @@ import cors from "cors";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
-import { clerkMiddleware } from "@clerk/express";
-import { publishableKeyFromHost } from "@clerk/shared/keys";
-import {
-  CLERK_PROXY_PATH,
-  clerkProxyMiddleware,
-  getClerkProxyHost,
-} from "./middlewares/clerkProxyMiddleware";
+import cookieParser from "cookie-parser";
 import router from "./routes";
 import authRouter from "./routes/auth";
+import { attachUser } from "./middlewares/clerk-auth";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -44,9 +39,8 @@ app.use(
   }),
 );
 
-app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
+app.use(cookieParser());
 app.use(
   compression({
     threshold: 1024,
@@ -71,14 +65,7 @@ app.use((req, res, next) => {
   });
 });
 
-app.use(
-  clerkMiddleware((req) => ({
-    publishableKey: publishableKeyFromHost(
-      getClerkProxyHost(req) ?? "",
-      process.env["CLERK_PUBLISHABLE_KEY"],
-    ),
-  })),
-);
+app.use(attachUser);
 
 const inboxLimiter = rateLimit({
   windowMs: 60 * 1000,

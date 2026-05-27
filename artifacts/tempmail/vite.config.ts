@@ -62,7 +62,7 @@ export default defineConfig(async ({ command }) => ({
       output: {
         manualChunks(id: string) {
           if (!id.includes("node_modules")) return undefined;
-          if (id.includes("@clerk")) return "clerk";
+
           if (id.includes("framer-motion")) return "motion";
           if (id.includes("recharts") || id.includes("/d3-") || id.includes("d3-")) return "charts";
           if (id.includes("react-dom") || id.includes("/react/jsx") || id.includes("react-hook-form") || id.includes("@hookform") || id.includes("wouter")) return "react-core";

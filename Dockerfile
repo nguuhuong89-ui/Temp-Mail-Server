@@ -16,11 +16,6 @@ COPY scripts/package.json scripts/
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
-# Build-time args: baked into the frontend bundle at build time (not runtime)
-ARG VITE_CLERK_PUBLISHABLE_KEY
-ARG VITE_CLERK_PROXY_URL
-ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
-ENV VITE_CLERK_PROXY_URL=$VITE_CLERK_PROXY_URL
 # Required by vite.config.ts at build time
 ENV PORT=3000
 ENV BASE_PATH=/
