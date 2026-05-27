@@ -32,7 +32,10 @@ RUN pnpm -w run typecheck:libs \
 FROM nginx:alpine AS web
 COPY --from=build /app/artifacts/tempmail/dist/public /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx-entrypoint.sh /nginx-entrypoint.sh
+RUN chmod +x /nginx-entrypoint.sh
 EXPOSE 80
+CMD ["/nginx-entrypoint.sh"]
 
 FROM node:24-slim AS api
 RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
