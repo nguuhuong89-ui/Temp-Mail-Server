@@ -90,11 +90,11 @@ services:
     expose:
       - "80"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ > /dev/null 2>&1 || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz > /dev/null 2>&1 || exit 1"]
+      interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 10s
     networks:
       - default
       - coolify
