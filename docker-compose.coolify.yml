@@ -21,8 +21,6 @@ services:
       SMTP_PORT: ${SMTP_PORT:-25}
       MAIL_DOMAIN: ${MAIL_DOMAIN:-mail.example.com}
       ADMIN_TOKEN: ${ADMIN_TOKEN:-change_me}
-      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
-      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     expose:

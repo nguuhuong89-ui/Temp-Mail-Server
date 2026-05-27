@@ -149,7 +149,7 @@ export default function AdminUsers() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Manage plans, roles and sync from Clerk.</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Manage plans and roles.</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg">
@@ -169,7 +169,7 @@ export default function AdminUsers() {
               disabled={sync.isPending}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} />
-              Sync Clerk
+              Refresh
             </Button>
           </div>
         </div>
@@ -223,7 +223,7 @@ export default function AdminUsers() {
           ) : !filtered.length ? (
             <div className="flex flex-col items-center justify-center py-14 text-muted-foreground gap-3">
               <Users className="h-10 w-10 opacity-20" />
-              <p className="text-sm">{data?.length ? "No users match the current filter." : "No users yet — click \"Sync Clerk\" to import."}</p>
+              <p className="text-sm">{data?.length ? "No users match the current filter." : "No users yet — click \"Refresh\" to import."}</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -332,7 +332,7 @@ export default function AdminUsers() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <p className="text-sm text-muted-foreground">Enter the Clerk user email. If not in DB yet, it will be created from Clerk.</p>
+            <p className="text-sm text-muted-foreground">Enter the user ID to add.</p>
             <Input
               placeholder="email@example.com"
               value={promoteEmail}

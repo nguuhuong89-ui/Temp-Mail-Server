@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useUser, useClerk } from "@clerk/react";
+import { useAuth, useUser } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,7 +22,7 @@ import { apiFetch } from "@/lib/api-fetch";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useTranslation } from "react-i18next";
 
-type Me = { id: string; plan: "free" | "pro"; role: "user" | "admin"; email: string | null };
+type Me = { id: string; plan: "free" | "pro"; role: "user" | "admin"; email: string | null; displayName: string | null };
 
 export function useMe() {
   return useQuery<Me>({
@@ -35,13 +35,13 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function AccountLayout({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useUser();
-  const { redirectToSignIn } = useClerk();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
-      redirectToSignIn({ redirectUrl: window.location.href });
+      setLocation("/sign-in");
     }
-  }, [isLoaded, isSignedIn, redirectToSignIn]);
+  }, [isLoaded, isSignedIn, setLocation]);
 
   const { t } = useTranslation();
   if (!isLoaded || !isSignedIn) {
@@ -58,8 +58,7 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
   const [location] = useLocation();
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  const { user, logout } = useAuth();
   const { data: me } = useMe();
 
   const nav = [
@@ -73,6 +72,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     { href: "/account/plan", label: t("account.plan"), icon: Crown },
   ];
 
+  const [, setLocation] = useLocation();
+
+  const handleLogout = async () => {
+    await logout();
+    setLocation("/");
+  };
+
   return (
     <>
       <div className="h-16 flex items-center px-6 border-b">
@@ -82,7 +88,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
       <div className="px-4 py-3 border-b text-sm">
         <div className="font-medium truncate" data-testid="account-email">
-          {user?.primaryEmailAddress?.emailAddress ?? user?.username}
+          {user?.displayName || user?.email || user?.id?.slice(0, 12)}
         </div>
         <div className="mt-1 flex items-center gap-2">
           {me?.plan === "pro" ? (
@@ -153,7 +159,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => signOut({ redirectUrl: basePath || "/" })}
+          onClick={handleLogout}
           data-testid="button-signout"
         >
           <LogOut className="h-4 w-4 mr-2" /> {t("accountLayout.signOut")}

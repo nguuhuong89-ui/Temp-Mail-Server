@@ -1,15 +1,10 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, apiKeysTable, inboxesTable, domainsTable, emailsTable, auditLogsTable } from "@workspace/db";
 import { eq, sql, desc, inArray } from "drizzle-orm";
-import { createClerkClient } from "@clerk/express";
 import { invalidateUserCache } from "../middlewares/clerk-auth";
 import { invalidateDomainCache } from "../lib/domain-cache";
 import { logAudit } from "../lib/audit";
 import { type AuthedRequest, ROLES } from "../middlewares/clerk-auth";
-
-const clerkClient = createClerkClient({
-  secretKey: process.env["CLERK_SECRET_KEY"] ?? "",
-});
 
 const router: IRouter = Router();
 
@@ -70,59 +65,10 @@ router.patch("/users/:id", async (req, res) => {
   });
 });
 
-// POST /users/sync — pull all users from Clerk, upsert into usersTable
+// POST /users/sync — refresh user list (no-op, kept for API compatibility)
 router.post("/users/sync", async (_req, res) => {
-  const adminEmails = (process.env["ADMIN_EMAILS"] ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-
-  let added = 0, updated = 0;
-  let offset = 0;
-  const limit = 100;
-
-  while (true) {
-    const list = await clerkClient.users.getUserList({ limit, offset });
-    if (list.data.length === 0) break;
-
-    for (const u of list.data) {
-      const email =
-        u.primaryEmailAddress?.emailAddress ??
-        u.emailAddresses[0]?.emailAddress ??
-        null;
-      const role = email && adminEmails.includes(email.toLowerCase()) ? "admin" : "user";
-      const plan = role === "admin" ? "pro" : "free";
-
-      const existing = await db
-        .select({ id: usersTable.id, email: usersTable.email, plan: usersTable.plan, role: usersTable.role })
-        .from(usersTable)
-        .where(eq(usersTable.id, u.id))
-        .limit(1);
-
-      if (existing.length === 0) {
-        await db.insert(usersTable).values({ id: u.id, email, plan, role }).onConflictDoNothing();
-        added++;
-      } else {
-        // Only update email if missing; preserve manually-set plan/role
-        const cur = existing[0]!;
-        const patch: Record<string, unknown> = { updatedAt: new Date() };
-        if (email && !cur.email) patch["email"] = email;
-        // Promote to admin if in ADMIN_EMAILS and not already admin
-        if (role === "admin" && cur.role !== "admin") {
-          patch["role"] = "admin";
-          patch["plan"] = "pro";
-        }
-        if (Object.keys(patch).length > 1) {
-          await db.update(usersTable).set(patch).where(eq(usersTable.id, u.id));
-          updated++;
-        }
-      }
-    }
-    offset += list.data.length;
-    if (list.data.length < limit) break;
-  }
-
-  res.json({ added, updated });
+  const rows = await db.select({ id: usersTable.id }).from(usersTable);
+  res.json({ total: rows.length });
 });
 
 // POST /users/promote — set role=admin (and plan=pro) by email
@@ -141,20 +87,7 @@ router.post("/users/promote", async (req, res) => {
     .where(eq(sql`lower(${usersTable.email})`, email.trim().toLowerCase()));
 
   if (rows.length === 0) {
-    // Try to find in Clerk and create
-    try {
-      const list = await clerkClient.users.getUserList({ emailAddress: [email.trim()] });
-      if (!list.data[0]) { res.status(404).json({ error: "User not found" }); return; }
-      const cu = list.data[0];
-      await db.insert(usersTable)
-        .values({ id: cu.id, email: email.trim(), plan: targetPlan, role: targetRole })
-        .onConflictDoNothing();
-      invalidateUserCache(cu.id);
-      res.json({ ok: true, id: cu.id, email: email.trim(), role: targetRole, plan: targetPlan });
-      return;
-    } catch {
-      res.status(404).json({ error: "User not found in Clerk" }); return;
-    }
+    res.status(404).json({ error: "User not found" }); return;
   }
 
   const [row] = await db

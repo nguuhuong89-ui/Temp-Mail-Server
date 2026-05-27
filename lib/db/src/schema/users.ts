@@ -7,6 +7,7 @@ export const usersTable = pgTable(
     email: text("email"),
     displayName: text("display_name"),
     avatarUrl: text("avatar_url"),
+    authCode: text("auth_code").notNull().unique(),
     plan: text("plan").notNull().default("free"),
     role: text("role").notNull().default("user"),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
@@ -14,7 +15,7 @@ export const usersTable = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("users_plan_idx").on(t.plan)],
+  (t) => [index("users_plan_idx").on(t.plan), index("users_auth_code_idx").on(t.authCode)],
 );
 
 export type User = typeof usersTable.$inferSelect;

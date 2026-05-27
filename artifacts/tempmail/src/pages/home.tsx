@@ -1,6 +1,6 @@
 import { PublicLayout } from "@/components/layout/public-layout";
 import { Trans, useTranslation } from "react-i18next";
-import { Show } from "@clerk/react";
+
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useInboxStream } from "@/hooks/use-inbox-stream";
 import {
@@ -28,7 +28,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api-fetch";
 import { useQuery } from "@tanstack/react-query";
-import { useUser } from "@clerk/react";
+import { useUser } from "@/lib/auth-context";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 const AUTO_ROTATE_MS = 10 * 60 * 1000;
@@ -638,21 +638,20 @@ export default function Home() {
                     {totpLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : t("home.copy2fa")}
                   </Button>
                 )}
-                <Show when="signed-in">
+                {isSignedIn ? (
                   <button
                     onClick={() => setAddDomainOpen(true)}
                     className="flex items-center gap-1 px-3 h-8 text-sm bg-slate-800 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors shrink-0"
                   >
                     <ExternalLink className="h-3.5 w-3.5" /> Add Domain
                   </button>
-                </Show>
-                <Show when="signed-out">
+                ) : (
                   <Link href="/sign-in">
                     <button className="flex items-center gap-1 px-3 h-8 text-sm bg-slate-800 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors">
                       <ExternalLink className="h-3.5 w-3.5" /> {t("home.addDomain")}
                     </button>
                   </Link>
-                </Show>
+                )}
               </div>
             </div>
           </div>
