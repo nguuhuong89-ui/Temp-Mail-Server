@@ -30,8 +30,12 @@ router.post("/inbox/random", async (req, res) => {
       .from(domainsTable)
       .where(eq(domainsTable.id, requestedDomainId))
       .limit(1);
-    if (!row || row.status !== "active" || !row.isPublic) {
+    if (!row || row.status !== "active") {
       res.status(400).json({ error: "Domain not available" });
+      return;
+    }
+    if (!row.isPublic && (!userId || row.userId !== userId)) {
+      res.status(403).json({ error: "Domain not available" });
       return;
     }
     domain = row.name;

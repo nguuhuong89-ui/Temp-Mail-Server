@@ -22,6 +22,38 @@ type Domain = {
   createdAt: string;
 };
 
+type DomainsResponse = {
+  domains: Domain[];
+  serverIp: string | null;
+  mailDomain: string;
+};
+
+function CopyButton({ value, onCopy }: { value: string; onCopy: (v: string) => void }) {
+  return (
+    <button
+      className="ml-1 p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground transition-colors"
+      onClick={() => onCopy(value)}
+      title="Copy"
+    >
+      <Copy className="h-3 w-3" />
+    </button>
+  );
+}
+
+function DnsRecordRow({ type, host, value, priority, onCopy }: { type: string; host: string; value: string; priority?: string; onCopy: (v: string) => void }) {
+  return (
+    <div className="grid grid-cols-[60px_80px_1fr_70px] gap-2 px-4 py-2.5 text-xs items-center border-b border-slate-100 dark:border-slate-800 last:border-0">
+      <span className="font-mono font-bold text-violet-600 dark:text-violet-400">{type}</span>
+      <span className="font-mono text-muted-foreground">{host}</span>
+      <div className="flex items-center gap-1 min-w-0">
+        <code className="font-mono text-foreground truncate">{value}</code>
+        <CopyButton value={value} onCopy={onCopy} />
+      </div>
+      <span className="font-mono text-muted-foreground text-right">{priority ?? "—"}</span>
+    </div>
+  );
+}
+
 export default function AccountDomains() {
   const { t } = useTranslation();
   const { data: me } = useMe();
@@ -49,10 +81,17 @@ function DomainsInner() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
 
-  const { data, isLoading } = useQuery<Domain[]>({
+  const { data: resp, isLoading } = useQuery<DomainsResponse>({
     queryKey: ["/account/domains"],
-    queryFn: () => apiFetch<Domain[]>("/api/account/domains"),
+    queryFn: async () => {
+      const raw = await apiFetch<DomainsResponse | Domain[]>("/api/account/domains");
+      if (Array.isArray(raw)) return { domains: raw, serverIp: null, mailDomain: "" };
+      return raw;
+    },
   });
+  const data = resp?.domains;
+  const serverIp = resp?.serverIp;
+  const mailDomain = resp?.mailDomain;
   const refresh = () => qc.invalidateQueries({ queryKey: ["/account/domains"] });
 
   const add = useMutation({
@@ -136,28 +175,16 @@ function DomainsInner() {
               {!d.verifiedAt && (
                 <CardContent className="space-y-3">
                   <div className="text-sm">
-                    <p className="text-muted-foreground mb-2">{t("domains.mxInstruction")}</p>
-                    <div className="bg-muted rounded-lg p-3 space-y-2 font-mono text-xs">
-                      <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
-                        <span className="text-muted-foreground">{t("domains.dnsType")}</span>
-                        <span>MX</span>
-                        <span></span>
+                    <p className="text-muted-foreground mb-2">{t("domains.dnsFullInstruction")}</p>
+                    <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                      <div className="grid grid-cols-[60px_80px_1fr_70px] gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-slate-200 dark:border-slate-700">
+                        <span>{t("domains.dnsType")}</span><span>Host</span><span>{t("domains.dnsValue")}</span><span className="text-right">{t("domains.dnsPriority")}</span>
                       </div>
-                      <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
-                        <span className="text-muted-foreground">{t("domains.dnsName")}</span>
-                        <span>@ ({t("domains.orDomain", { domain: d.name })})</span>
-                        <span></span>
-                      </div>
-                      <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
-                        <span className="text-muted-foreground">{t("domains.dnsPriority")}</span>
-                        <span>10</span>
-                        <span></span>
-                      </div>
-                      <div className="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
-                        <span className="text-muted-foreground">{t("domains.dnsValue")}</span>
-                        <span className="break-all" data-testid={`text-mx-${d.id}`}>{d.mxHost}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copy(d.mxHost)}><Copy className="h-3 w-3" /></Button>
-                      </div>
+                      {serverIp && (
+                        <DnsRecordRow type="A" host="mail" value={serverIp} onCopy={copy} />
+                      )}
+                      <DnsRecordRow type="MX" host="@" value={d.mxHost || mailDomain || "mail.vnsi.app"} priority="10" onCopy={copy} />
+                      <DnsRecordRow type="TXT" host="@" value="v=spf1 mx ~all" onCopy={copy} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">{t("domains.dnsPropagation")}</p>
                   </div>

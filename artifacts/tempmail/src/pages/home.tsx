@@ -514,6 +514,19 @@ export default function Home() {
                   autoCapitalize="none"
                   autoCorrect="off"
                 />
+                {/* Domain selector */}
+                {Array.isArray(publicDomains) && publicDomains.length > 0 && (
+                  <select
+                    value={selectedDomainId}
+                    onChange={(e) => setSelectedDomainId(e.target.value)}
+                    className="px-2 py-2 border border-indigo-200 dark:border-indigo-900/60 rounded-lg text-sm bg-indigo-50/50 dark:bg-indigo-950/30 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all max-w-[200px]"
+                  >
+                    <option value="">{t("home.allDomains")}</option>
+                    {publicDomains.map((d) => (
+                      <option key={d.id} value={String(d.id)}>@{d.name}</option>
+                    ))}
+                  </select>
+                )}
                 {address && (
                   <span className={`px-2.5 py-1 text-xs font-bold rounded-full tracking-wide shrink-0 ${isOnline ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-500/20 text-slate-400 border border-slate-500/30"}`}>
                     {isOnline ? t("home.online") : t("home.offline")}
@@ -572,9 +585,8 @@ export default function Home() {
                 size="sm"
                 className="bg-emerald-500 hover:bg-emerald-400 text-white border-0 shadow-sm shadow-emerald-500/30 font-semibold"
                 onClick={() => {
-                  if (Array.isArray(publicDomains) && publicDomains.length > 0 && !customDomainId) {
-                    setCustomDomainId(String(publicDomains[0].id));
-                  }
+                  const domainIdToUse = selectedDomainId || (Array.isArray(publicDomains) && publicDomains.length > 0 ? String(publicDomains[0].id) : "");
+                  if (domainIdToUse) setCustomDomainId(domainIdToUse);
                   setCustomDialogOpen(true);
                 }}
               >

@@ -293,8 +293,28 @@ router.get("/account/domains", requireUser, requirePro, async (req, res) => {
     .from(domainsTable)
     .where(eq(domainsTable.userId, r.userId!))
     .orderBy(desc(domainsTable.createdAt));
-  res.json(
-    rows.map((d) => ({
+
+  let serverIp: string = process.env["SERVER_IP"] ?? "";
+  if (!serverIp) {
+    const { networkInterfaces } = await import("node:os");
+    const nets = networkInterfaces();
+    for (const ifaces of Object.values(nets)) {
+      for (const iface of ifaces ?? []) {
+        if (iface.family === "IPv4" && !iface.internal) {
+          const ip = iface.address;
+          if (!ip.startsWith("172.") && !ip.startsWith("10.") && !ip.startsWith("192.168.")) {
+            serverIp = ip;
+            break;
+          }
+          if (!serverIp) serverIp = ip;
+        }
+      }
+      if (serverIp && !serverIp.startsWith("172.") && !serverIp.startsWith("10.")) break;
+    }
+  }
+
+  res.json({
+    domains: rows.map((d) => ({
       id: d.id,
       name: d.name,
       status: d.status,
@@ -302,7 +322,9 @@ router.get("/account/domains", requireUser, requirePro, async (req, res) => {
       mxHost: MAIL_HOST,
       createdAt: d.createdAt.toISOString(),
     })),
-  );
+    serverIp: serverIp || null,
+    mailDomain: MAIL_HOST,
+  });
 });
 
 router.post("/account/domains", requireUser, requirePro, async (req, res) => {
