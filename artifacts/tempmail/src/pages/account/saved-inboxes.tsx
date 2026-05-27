@@ -16,6 +16,7 @@ type SavedInboxItem = {
   address: string;
   label: string | null;
   savedAt: string;
+  inboxCreatedAt: string | null;
   emailCount: number;
   lastEmailAt: string | null;
 };
@@ -77,6 +78,7 @@ export default function AccountSavedInboxes() {
               <TableRow>
                 <TableHead>{t("account.address")}</TableHead>
                 <TableHead>{t("account.label")}</TableHead>
+                <TableHead>{t("account.inboxCreatedAt")}</TableHead>
                 <TableHead>{t("account.savedAt")}</TableHead>
                 <TableHead className="text-right">{t("account.emailCount")}</TableHead>
                 <TableHead>{t("account.lastEmail")}</TableHead>
@@ -85,11 +87,11 @@ export default function AccountSavedInboxes() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="h-24 text-center">
+                <TableRow><TableCell colSpan={7} className="h-24 text-center">
                   <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </TableCell></TableRow>
               ) : !data?.length ? (
-                <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                   <div className="flex flex-col items-center gap-2">
                     <BookmarkCheck className="h-8 w-8 opacity-30" />
                     <p>{t("account.noSavedInboxes")}</p>
@@ -126,6 +128,11 @@ export default function AccountSavedInboxes() {
                           <Pencil className="h-3 w-3 opacity-40" />
                         </button>
                       )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {item.inboxCreatedAt
+                        ? formatDistanceToNow(new Date(item.inboxCreatedAt), { addSuffix: true })
+                        : "—"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDistanceToNow(new Date(item.savedAt), { addSuffix: true })}

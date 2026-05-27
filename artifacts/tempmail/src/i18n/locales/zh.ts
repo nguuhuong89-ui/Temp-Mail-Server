@@ -147,6 +147,7 @@ const zh: Translations = {
     expired: "已过期",
     savedInboxes: "已收藏收件箱",
     savedInboxesDesc: "您收藏的收件箱，方便快速访问。与账户同步。",
+    inboxCreatedAt: "创建时间",
     savedAt: "收藏时间",
     lastEmail: "最后邮件",
     label: "标签",

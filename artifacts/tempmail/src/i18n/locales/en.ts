@@ -145,6 +145,7 @@ const en = {
     expired: "Expired",
     savedInboxes: "Saved Inboxes",
     savedInboxesDesc: "Inboxes you've saved for quick access. Synced to your account.",
+    inboxCreatedAt: "Created",
     savedAt: "Saved",
     lastEmail: "Last Email",
     label: "Label",
