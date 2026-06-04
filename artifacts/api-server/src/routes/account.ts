@@ -159,6 +159,7 @@ router.get("/account/inboxes", requireUser, async (req, res) => {
       id: inboxesTable.id,
       address: inboxesTable.address,
       token: inboxesTable.token,
+      isShared: inboxesTable.isShared,
       createdAt: inboxesTable.createdAt,
       expiresAt: inboxesTable.expiresAt,
       emailCount: sql<number>`count(${emailsTable.id})::int`,
@@ -174,6 +175,7 @@ router.get("/account/inboxes", requireUser, async (req, res) => {
       id: i.id,
       address: i.address,
       token: i.token,
+      isShared: i.isShared,
       createdAt: i.createdAt.toISOString(),
       expiresAt: i.expiresAt.toISOString(),
       emailCount: Number(i.emailCount ?? 0),
@@ -196,6 +198,32 @@ router.delete("/account/inboxes/:address", requireUser, async (req, res) => {
   await db.delete(emailsTable).where(eq(emailsTable.toAddress, address));
   await db.delete(inboxesTable).where(eq(inboxesTable.address, address));
   res.status(204).end();
+});
+
+// Toggle inbox sharing
+router.patch("/account/inboxes/:address/sharing", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const address = String(req.params["address"]).toLowerCase();
+  const { isShared } = req.body ?? {};
+  if (typeof isShared !== "boolean") {
+    res.status(400).json({ error: "isShared boolean required" });
+    return;
+  }
+  const [inbox] = await db
+    .select()
+    .from(inboxesTable)
+    .where(eq(inboxesTable.address, address))
+    .limit(1);
+  if (!inbox || inbox.ownerUserId !== r.userId) {
+    res.status(404).json({ error: "Inbox not found" });
+    return;
+  }
+  const [updated] = await db
+    .update(inboxesTable)
+    .set({ isShared })
+    .where(eq(inboxesTable.address, address))
+    .returning();
+  res.json({ address: updated!.address, isShared: updated!.isShared });
 });
 
 // === Saved inboxes (persistent, server-side) ===

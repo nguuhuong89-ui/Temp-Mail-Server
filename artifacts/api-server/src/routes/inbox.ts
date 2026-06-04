@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, inboxesTable, emailsTable, domainsTable } from "@workspace/db";
+import { db, inboxesTable, emailsTable, domainsTable, savedInboxesTable } from "@workspace/db";
 import { and, eq, desc } from "drizzle-orm";
 import {
   generateLocalPart,
@@ -9,6 +9,26 @@ import {
 } from "../lib/inbox-utils";
 import { emailBus, type EmailEvent } from "../lib/events";
 import { ensureDefaultDomain, lookupDomain } from "../lib/domain-cache";
+
+/**
+ * Check if the domain of an email address is private and whether the
+ * given user has access. Returns true if access is DENIED.
+ */
+async function isDomainAccessDenied(address: string, userId: string | null): Promise<boolean> {
+  const atIdx = address.lastIndexOf("@");
+  if (atIdx < 0) return false;
+  const domainName = address.slice(atIdx + 1).toLowerCase();
+  const [domain] = await db
+    .select({ isPublic: domainsTable.isPublic, userId: domainsTable.userId, status: domainsTable.status })
+    .from(domainsTable)
+    .where(eq(domainsTable.name, domainName))
+    .limit(1);
+  if (!domain) return false; // unknown domain = allow (default domain)
+  if (domain.isPublic) return false; // public domain = allow
+  // Private domain: only the owner can access
+  if (!userId || domain.userId !== userId) return true;
+  return false;
+}
 
 const router: IRouter = Router();
 
@@ -53,6 +73,13 @@ router.post("/inbox/random", async (req, res) => {
         .values({ address, token, expiresAt, ownerUserId: userId })
         .returning();
       if (!row) continue;
+      // Auto-save for registered users
+      if (userId) {
+        db.insert(savedInboxesTable)
+          .values({ userId, address })
+          .onConflictDoNothing()
+          .catch(() => {});
+      }
       res.json({
         address: row.address,
         token: row.token,
@@ -108,6 +135,13 @@ router.post("/inbox/custom", async (req: Request, res: Response) => {
       res.status(500).json({ error: "Insert failed" });
       return;
     }
+    // Auto-save for registered users
+    if (userId) {
+      db.insert(savedInboxesTable)
+        .values({ userId, address })
+        .onConflictDoNothing()
+        .catch(() => {});
+    }
     res.json({
       address: row.address,
       token: row.token,
@@ -122,6 +156,12 @@ router.post("/inbox/custom", async (req: Request, res: Response) => {
 router.get("/inbox/:address", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
   const userId = (req as Request & { userId?: string }).userId ?? null;
+
+  // Domain-level access control: private domains only accessible by owner
+  if (await isDomainAccessDenied(address, userId)) {
+    res.status(404).json({ error: "Inbox not found" });
+    return;
+  }
 
   // Fetch inbox metadata and full email list in parallel — both are always needed
   const [inboxRows, emails] = await Promise.all([
@@ -150,8 +190,11 @@ router.get("/inbox/:address", async (req, res) => {
       return;
     }
     if (inbox.ownerUserId !== null && inbox.ownerUserId !== userId) {
-      res.status(404).json({ error: "Inbox not found" });
-      return;
+      // Allow access if inbox is shared
+      if (!inbox.isShared) {
+        res.status(404).json({ error: "Inbox not found" });
+        return;
+      }
     }
     // Auto-claim: if inbox is anonymous and a signed-in user views it, claim it
     if (inbox.ownerUserId === null && inbox.ownerApiKeyId === null && userId) {
@@ -211,14 +254,18 @@ router.get("/inbox/:address", async (req, res) => {
 
 /**
  * Returns true if the inbox exists AND is owned by someone other than the
- * currently signed-in user (either an API key, or a different account user).
- * Public inbox routes use this to short-circuit with 404 — no existence oracle.
+ * currently signed-in user (either an API key, or a different account user)
+ * AND is not shared. Also checks domain-level access.
  */
 async function isOwnedByOther(req: Request, address: string): Promise<boolean> {
+  const userId = (req as Request & { userId?: string }).userId ?? null;
+  // Domain-level check first
+  if (await isDomainAccessDenied(address, userId)) return true;
   const [row] = await db
     .select({
       apiKeyOwner: inboxesTable.ownerApiKeyId,
       userOwner: inboxesTable.ownerUserId,
+      isShared: inboxesTable.isShared,
     })
     .from(inboxesTable)
     .where(eq(inboxesTable.address, address))
@@ -226,8 +273,11 @@ async function isOwnedByOther(req: Request, address: string): Promise<boolean> {
   if (!row) return false;
   if (row.apiKeyOwner !== null) return true;
   if (row.userOwner !== null) {
-    const userId = (req as Request & { userId?: string }).userId ?? null;
-    if (row.userOwner !== userId) return true;
+    if (row.userOwner !== userId) {
+      // Allow access if inbox is shared
+      if (row.isShared) return false;
+      return true;
+    }
   }
   return false;
 }

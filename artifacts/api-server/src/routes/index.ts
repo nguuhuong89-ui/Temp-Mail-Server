@@ -16,6 +16,7 @@ import adminSettingsRouter from "./admin-settings";
 import adminAuditRouter from "./admin-audit";
 import adminRateLimitsRouter from "./admin-rate-limits";
 import adminHealthRouter from "./admin-health";
+import adminIpBansRouter from "./admin-ip-bans";
 import dataExportRouter from "./data-export";
 import publicRouter from "./public";
 import { adminAuth } from "../middlewares/admin-auth";
@@ -51,5 +52,6 @@ router.use(adminSettingsRouter);
 router.use("/admin", adminAuditRouter);
 router.use("/admin", adminRateLimitsRouter);
 router.use("/admin", adminHealthRouter);
+router.use(adminIpBansRouter);
 
 export default router;
