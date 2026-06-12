@@ -9,12 +9,24 @@ import {
 } from "../lib/inbox-utils";
 import { emailBus, type EmailEvent } from "../lib/events";
 import { ensureDefaultDomain, lookupDomain } from "../lib/domain-cache";
+import type { AuthedRequest } from "../middlewares/session-auth";
+import { checkAdminToken } from "../middlewares/admin-auth";
+
+/** Check if the current request is from an admin (via session role or x-admin-token) */
+function isAdminRequest(req: Request): boolean {
+  const r = req as AuthedRequest;
+  if (r.userRole === "admin" || r.userRole === "super_admin") return true;
+  const token = req.header("x-admin-token") || (req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  return checkAdminToken(token || undefined);
+}
 
 /**
  * Check if the domain of an email address is private and whether the
  * given user has access. Returns true if access is DENIED.
+ * Admins bypass this check.
  */
-async function isDomainAccessDenied(address: string, userId: string | null): Promise<boolean> {
+async function isDomainAccessDenied(address: string, userId: string | null, admin = false): Promise<boolean> {
+  if (admin) return false;
   const atIdx = address.lastIndexOf("@");
   if (atIdx < 0) return false;
   const domainName = address.slice(atIdx + 1).toLowerCase();
@@ -156,9 +168,10 @@ router.post("/inbox/custom", async (req: Request, res: Response) => {
 router.get("/inbox/:address", async (req, res) => {
   const address = String(req.params["address"]).toLowerCase();
   const userId = (req as Request & { userId?: string }).userId ?? null;
+  const admin = isAdminRequest(req);
 
-  // Domain-level access control: private domains only accessible by owner
-  if (await isDomainAccessDenied(address, userId)) {
+  // Domain-level access control: private domains only accessible by owner (admins bypass)
+  if (await isDomainAccessDenied(address, userId, admin)) {
     res.status(404).json({ error: "Inbox not found" });
     return;
   }
@@ -185,11 +198,11 @@ router.get("/inbox/:address", async (req, res) => {
   let inbox = inboxRows[0];
 
   if (inbox) {
-    if (inbox.ownerApiKeyId !== null) {
+    if (inbox.ownerApiKeyId !== null && !admin) {
       res.status(404).json({ error: "Inbox not found" });
       return;
     }
-    if (inbox.ownerUserId !== null && inbox.ownerUserId !== userId) {
+    if (!admin && inbox.ownerUserId !== null && inbox.ownerUserId !== userId) {
       // Allow access if inbox is shared
       if (!inbox.isShared) {
         res.status(404).json({ error: "Inbox not found" });
@@ -197,7 +210,8 @@ router.get("/inbox/:address", async (req, res) => {
       }
     }
     // Auto-claim: if inbox is anonymous and a signed-in user views it, claim it
-    if (inbox.ownerUserId === null && inbox.ownerApiKeyId === null && userId) {
+    // (don't auto-claim for admin viewing other users' inboxes)
+    if (!admin && inbox.ownerUserId === null && inbox.ownerApiKeyId === null && userId) {
       await db
         .update(inboxesTable)
         .set({ ownerUserId: userId })
@@ -256,8 +270,10 @@ router.get("/inbox/:address", async (req, res) => {
  * Returns true if the inbox exists AND is owned by someone other than the
  * currently signed-in user (either an API key, or a different account user)
  * AND is not shared. Also checks domain-level access.
+ * Admins bypass all ownership checks.
  */
 async function isOwnedByOther(req: Request, address: string): Promise<boolean> {
+  if (isAdminRequest(req)) return false;
   const userId = (req as Request & { userId?: string }).userId ?? null;
   // Domain-level check first
   if (await isDomainAccessDenied(address, userId)) return true;
