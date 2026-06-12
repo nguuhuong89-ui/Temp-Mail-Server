@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import router from "./routes";
 import authRouter from "./routes/auth";
 import { attachUser } from "./middlewares/session-auth";
+import { ipBanMiddleware } from "./middlewares/ip-ban";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -65,6 +66,7 @@ app.use((req, res, next) => {
   });
 });
 
+app.use(ipBanMiddleware);
 app.use(attachUser);
 
 const inboxLimiter = rateLimit({

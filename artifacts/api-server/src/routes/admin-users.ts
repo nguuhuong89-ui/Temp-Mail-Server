@@ -18,6 +18,7 @@ router.get("/users", async (_req, res) => {
         displayName: usersTable.displayName,
         plan: usersTable.plan,
         role: usersTable.role,
+        totpEnabled: usersTable.totpEnabled,
         createdAt: usersTable.createdAt,
         apiKeyCount: sql<number>`(select count(*)::int from api_keys where api_keys.user_id = users.id)`,
         inboxCount: sql<number>`(select count(*)::int from inboxes where inboxes.owner_user_id = users.id)`,
@@ -43,10 +44,11 @@ router.get("/users", async (_req, res) => {
 router.patch("/users/:id", async (req, res) => {
   const r = req as AuthedRequest;
   const id = String(req.params["id"]);
-  const { plan, role } = req.body ?? {};
+  const { plan, role, displayName } = req.body ?? {};
   const patch: Record<string, unknown> = { updatedAt: new Date() };
   if (plan === "free" || plan === "pro") patch["plan"] = plan;
   if (typeof role === "string" && (ROLES as readonly string[]).includes(role)) patch["role"] = role;
+  if (typeof displayName === "string") patch["displayName"] = displayName.trim().slice(0, 100) || null;
   if (Object.keys(patch).length === 1) {
     res.status(400).json({ error: "Nothing to update" });
     return;

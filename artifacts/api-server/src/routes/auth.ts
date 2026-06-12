@@ -6,6 +6,7 @@ import { eq, and, lt } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { checkAdminToken, isAdminAuthConfigured } from "../middlewares/admin-auth";
 import { type AuthedRequest, requireUser } from "../middlewares/session-auth";
+import { generateTotp } from "../lib/totp";
 
 const router: IRouter = Router();
 
@@ -102,7 +103,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
   }
 
   const [user] = await db
-    .select({ id: usersTable.id, deletedAt: usersTable.deletedAt })
+    .select({ id: usersTable.id, deletedAt: usersTable.deletedAt, totpEnabled: usersTable.totpEnabled, totpSecret: usersTable.totpSecret })
     .from(usersTable)
     .where(eq(usersTable.authCode, rawCode))
     .limit(1);
@@ -115,6 +116,24 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
   if (user.deletedAt) {
     res.status(403).json({ error: "Account has been deleted" });
     return;
+  }
+
+  // Check 2FA if enabled
+  if (user.totpEnabled && user.totpSecret) {
+    const totpCode = String(req.body?.totpCode ?? "").replace(/\s/g, "");
+    if (!totpCode) {
+      res.status(200).json({ ok: false, requires2FA: true, message: "2FA code required" });
+      return;
+    }
+    const { code: expectedCode } = generateTotp(user.totpSecret);
+    if (totpCode !== expectedCode) {
+      // Check previous period for clock drift
+      const { code: prevCode } = generateTotp(user.totpSecret, { timestamp: Math.floor(Date.now() / 1000) - 30 });
+      if (totpCode !== prevCode) {
+        res.status(401).json({ error: "Invalid 2FA code" });
+        return;
+      }
+    }
   }
 
   // Update last login
@@ -155,6 +174,7 @@ router.get("/auth/me", requireUser, async (req, res) => {
       avatarUrl: usersTable.avatarUrl,
       plan: usersTable.plan,
       role: usersTable.role,
+      totpEnabled: usersTable.totpEnabled,
       createdAt: usersTable.createdAt,
     })
     .from(usersTable)
@@ -166,6 +186,118 @@ router.get("/auth/me", requireUser, async (req, res) => {
     return;
   }
   res.json(user);
+});
+
+// --- 2FA (TOTP) endpoints ---
+
+function generateBase32Secret(): string {
+  const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const bytes = crypto.randomBytes(20);
+  let result = "";
+  for (let i = 0; i < 20; i++) {
+    result += B32[bytes[i]! % 32];
+  }
+  return result;
+}
+
+// Generate 2FA secret (setup, not yet enabled)
+router.post("/auth/2fa/setup", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const [user] = await db
+    .select({ totpEnabled: usersTable.totpEnabled })
+    .from(usersTable)
+    .where(eq(usersTable.id, r.userId!))
+    .limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  if (user.totpEnabled) { res.status(400).json({ error: "2FA already enabled" }); return; }
+
+  const secret = generateBase32Secret();
+  await db.update(usersTable).set({ totpSecret: secret }).where(eq(usersTable.id, r.userId!));
+
+  const issuer = "TempMail";
+  const otpauthUri = `otpauth://totp/${issuer}:${r.userId}?secret=${secret}&issuer=${issuer}&digits=6&period=30`;
+
+  res.json({ secret, otpauthUri });
+});
+
+// Verify TOTP and enable 2FA
+router.post("/auth/2fa/enable", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const totpCode = String(req.body?.code ?? "").replace(/\s/g, "");
+  if (!totpCode || totpCode.length !== 6) {
+    res.status(400).json({ error: "6-digit code required" });
+    return;
+  }
+
+  const [user] = await db
+    .select({ totpSecret: usersTable.totpSecret, totpEnabled: usersTable.totpEnabled })
+    .from(usersTable)
+    .where(eq(usersTable.id, r.userId!))
+    .limit(1);
+  if (!user || !user.totpSecret) {
+    res.status(400).json({ error: "Run /auth/2fa/setup first" });
+    return;
+  }
+  if (user.totpEnabled) {
+    res.status(400).json({ error: "2FA already enabled" });
+    return;
+  }
+
+  const { code: expected } = generateTotp(user.totpSecret);
+  if (totpCode !== expected) {
+    const { code: prev } = generateTotp(user.totpSecret, { timestamp: Math.floor(Date.now() / 1000) - 30 });
+    if (totpCode !== prev) {
+      res.status(401).json({ error: "Invalid code" });
+      return;
+    }
+  }
+
+  await db.update(usersTable).set({ totpEnabled: true }).where(eq(usersTable.id, r.userId!));
+  res.json({ ok: true, message: "2FA enabled" });
+});
+
+// Disable 2FA
+router.post("/auth/2fa/disable", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const totpCode = String(req.body?.code ?? "").replace(/\s/g, "");
+
+  const [user] = await db
+    .select({ totpSecret: usersTable.totpSecret, totpEnabled: usersTable.totpEnabled })
+    .from(usersTable)
+    .where(eq(usersTable.id, r.userId!))
+    .limit(1);
+  if (!user || !user.totpEnabled || !user.totpSecret) {
+    res.status(400).json({ error: "2FA not enabled" });
+    return;
+  }
+
+  // Verify current TOTP to disable
+  if (!totpCode || totpCode.length !== 6) {
+    res.status(400).json({ error: "Current 6-digit code required to disable 2FA" });
+    return;
+  }
+  const { code: expected } = generateTotp(user.totpSecret);
+  if (totpCode !== expected) {
+    const { code: prev } = generateTotp(user.totpSecret, { timestamp: Math.floor(Date.now() / 1000) - 30 });
+    if (totpCode !== prev) {
+      res.status(401).json({ error: "Invalid code" });
+      return;
+    }
+  }
+
+  await db.update(usersTable).set({ totpEnabled: false, totpSecret: null }).where(eq(usersTable.id, r.userId!));
+  res.json({ ok: true, message: "2FA disabled" });
+});
+
+// Check 2FA status
+router.get("/auth/2fa/status", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const [user] = await db
+    .select({ totpEnabled: usersTable.totpEnabled })
+    .from(usersTable)
+    .where(eq(usersTable.id, r.userId!))
+    .limit(1);
+  res.json({ enabled: user?.totpEnabled ?? false });
 });
 
 // --- Cleanup expired sessions (called periodically) ---

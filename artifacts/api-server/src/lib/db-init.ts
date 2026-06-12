@@ -147,5 +147,23 @@ export async function initDb(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS sessions_user_idx    ON sessions (user_id);
     CREATE INDEX IF NOT EXISTS sessions_expires_idx ON sessions (expires_at);
+
+    -- Add is_shared column to inboxes
+    ALTER TABLE inboxes ADD COLUMN IF NOT EXISTS is_shared BOOLEAN NOT NULL DEFAULT FALSE;
+
+    -- Add TOTP columns to users
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+
+    -- Banned IPs table
+    CREATE TABLE IF NOT EXISTS banned_ips (
+      id         SERIAL PRIMARY KEY,
+      ip         TEXT NOT NULL UNIQUE,
+      reason     TEXT,
+      banned_by  TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS banned_ips_ip_idx ON banned_ips (ip);
   `);
 }
