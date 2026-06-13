@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Mail, Copy, Trash2, ChevronLeft, ChevronRight, Paperclip, ExternalLink, Search, Wand2, AtSign, Bookmark, BookmarkCheck, Play, Pin, X, History, KeyRound, Link2, Timer, Zap } from "lucide-react";
+import { RefreshCw, Mail, Copy, Trash2, ChevronLeft, ChevronRight, Paperclip, ExternalLink, Search, Wand2, AtSign, Bookmark, BookmarkCheck, Play, Pin, X, History, KeyRound, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdRenderer } from "@/components/ad-renderer";
 import { Link, useParams, useLocation } from "wouter";
@@ -31,7 +31,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/lib/auth-context";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
-const AUTO_ROTATE_MS = 10 * 60 * 1000;
 
 type QuickItem = { type: "otp"; value: string } | { type: "link"; value: string };
 function extractQuickData(text: string): QuickItem[] {
@@ -186,9 +185,7 @@ export default function Home() {
   const [customUsername, setCustomUsername] = useState("");
   const [customDomainId, setCustomDomainId] = useState<string>("");
 
-  // Auto-rotate timer
-  const lastAddressChangedAt = useRef(Date.now());
-  const [autoRotateCountdown, setAutoRotateCountdown] = useState<number | null>(null);
+
 
   // 2FA state
   const [totpSecret, setTotpSecret] = useState("");
@@ -226,43 +223,7 @@ export default function Home() {
   // Reset page when inbox changes
   useEffect(() => { setPage(1); }, [address]);
 
-  // Reset auto-rotate timer when address changes
-  useEffect(() => {
-    if (address) { lastAddressChangedAt.current = Date.now(); setAutoRotateCountdown(null); }
-  }, [address]);
 
-  // Check every 30s whether 10 minutes have passed on same inbox
-  useEffect(() => {
-    if (!address) return;
-    const iv = setInterval(() => {
-      if (Date.now() - lastAddressChangedAt.current >= AUTO_ROTATE_MS) {
-        setAutoRotateCountdown((c) => (c === null ? 5 : c));
-      }
-    }, 30_000);
-    return () => clearInterval(iv);
-  }, [address]);
-
-  // Countdown tick → auto-generate when reaches 0
-  useEffect(() => {
-    if (autoRotateCountdown === null) return;
-    if (autoRotateCountdown <= 0) {
-      setAutoRotateCountdown(null);
-      createRandom.mutate(
-        { data: {} },
-        {
-          onSuccess: (data) => {
-            setLocalAddress(data.address);
-            window.history.pushState({}, "", `/inbox/${data.address}`);
-            autoSave(data.address);
-            toast({ title: t("home.autoRotatedToast"), description: data.address });
-          },
-        },
-      );
-      return;
-    }
-    const timer = setTimeout(() => setAutoRotateCountdown((c) => (c !== null ? c - 1 : null)), 1000);
-    return () => clearTimeout(timer);
-  }, [autoRotateCountdown]);
 
   // Auto-create email for new visitors (no address stored)
   const autoCreatedRef = useRef(false);
@@ -512,31 +473,6 @@ export default function Home() {
     <PublicLayout>
       <div className="container max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4">
         <AdRenderer placement="header" />
-
-        {/* Auto-rotate countdown banner */}
-        {autoRotateCountdown !== null && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 shadow-md">
-            <Timer className="h-5 w-5 text-amber-500 shrink-0 animate-pulse" />
-            <div className="flex-1 min-w-0">
-              <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">{t("home.autoRotateBanner")} </span>
-              <span className="text-sm text-amber-700 dark:text-amber-300">{t("home.autoRotateSuffix")} <strong className="font-mono text-base">{autoRotateCountdown}s</strong></span>
-            </div>
-            <div className="flex gap-2 shrink-0">
-              <button
-                onClick={() => { setAutoRotateCountdown(null); lastAddressChangedAt.current = Date.now(); }}
-                className="text-xs px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 font-medium transition-colors"
-              >
-                {t("home.keepIt")}
-              </button>
-              <button
-                onClick={() => { setAutoRotateCountdown(0); }}
-                className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white font-medium transition-colors flex items-center gap-1"
-              >
-                <Zap className="h-3 w-3" /> {t("home.createNow")}
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Main card */}
         <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur rounded-xl border border-white/20 shadow-2xl shadow-black/30 overflow-hidden">
