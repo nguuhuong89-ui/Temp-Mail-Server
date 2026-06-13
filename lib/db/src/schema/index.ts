@@ -10,3 +10,4 @@ export * from "./audit-logs";
 export * from "./webhooks";
 export * from "./saved-inboxes";
 export * from "./banned-ips";
+export * from "./domain-shares";

@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, inboxesTable, emailsTable, domainsTable, savedInboxesTable } from "@workspace/db";
+import { db, inboxesTable, emailsTable, domainsTable, savedInboxesTable, domainSharesTable } from "@workspace/db";
 import { and, eq, desc } from "drizzle-orm";
 import {
   generateLocalPart,
@@ -31,15 +31,22 @@ async function isDomainAccessDenied(address: string, userId: string | null, admi
   if (atIdx < 0) return false;
   const domainName = address.slice(atIdx + 1).toLowerCase();
   const [domain] = await db
-    .select({ isPublic: domainsTable.isPublic, userId: domainsTable.userId, status: domainsTable.status })
+    .select({ id: domainsTable.id, isPublic: domainsTable.isPublic, userId: domainsTable.userId, status: domainsTable.status })
     .from(domainsTable)
     .where(eq(domainsTable.name, domainName))
     .limit(1);
   if (!domain) return false; // unknown domain = allow (default domain)
   if (domain.isPublic) return false; // public domain = allow
-  // Private domain: only the owner can access
-  if (!userId || domain.userId !== userId) return true;
-  return false;
+  if (!userId) return true;
+  if (domain.userId === userId) return false; // owner
+  // Check if domain is shared with this user
+  const [share] = await db
+    .select({ id: domainSharesTable.id })
+    .from(domainSharesTable)
+    .where(and(eq(domainSharesTable.domainId, domain.id), eq(domainSharesTable.sharedWithUserId, userId)))
+    .limit(1);
+  if (share) return false; // shared with this user
+  return true;
 }
 
 const router: IRouter = Router();

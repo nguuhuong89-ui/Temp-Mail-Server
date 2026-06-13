@@ -165,5 +165,20 @@ export async function initDb(): Promise<void> {
       expires_at TIMESTAMPTZ
     );
     CREATE INDEX IF NOT EXISTS banned_ips_ip_idx ON banned_ips (ip);
+
+    -- Domain shares table
+    CREATE TABLE IF NOT EXISTS domain_shares (
+      id                  SERIAL PRIMARY KEY,
+      domain_id           INTEGER NOT NULL,
+      shared_with_user_id TEXT NOT NULL,
+      shared_by_user_id   TEXT NOT NULL,
+      created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(domain_id, shared_with_user_id)
+    );
+    CREATE INDEX IF NOT EXISTS domain_shares_domain_idx ON domain_shares (domain_id);
+    CREATE INDEX IF NOT EXISTS domain_shares_user_idx   ON domain_shares (shared_with_user_id);
+
+    -- Add password_hash and email columns for email+password auth
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
   `);
 }

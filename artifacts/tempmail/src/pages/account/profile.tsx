@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { User, Mail, Key, Globe, Inbox, Trash2, Save, AlertTriangle, Download } from "lucide-react";
+import { User, Mail, Key, Globe, Inbox, Trash2, Save, AlertTriangle, Download, Lock, Link2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-fetch";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "react-i18next";
 
 type Usage = { inboxCount: number; emailCount: number; domainCount: number; apiKeyCount: number };
@@ -23,6 +24,12 @@ export default function AccountProfile() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+
+  // Email + Password linking
+  const [linkEmail, setLinkEmail] = useState("");
+  const [linkPassword, setLinkPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   const { data: usage } = useQuery<Usage>({
     queryKey: ["/account/usage"],
@@ -47,6 +54,35 @@ export default function AccountProfile() {
       toast({ title: t("profile.saved") });
     },
     onError: (e: Error) => toast({ title: t("profile.saveFailed"), description: e.message, variant: "destructive" }),
+  });
+
+  const linkEmailMutation = useMutation({
+    mutationFn: () =>
+      apiFetch("/api/auth/link-email", {
+        method: "POST",
+        body: JSON.stringify({ email: linkEmail, password: linkPassword }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/auth/me"] });
+      toast({ title: t("profile.emailLinked") });
+      setLinkEmail("");
+      setLinkPassword("");
+    },
+    onError: (e: Error) => toast({ title: t("profile.emailLinkFailed"), description: e.message, variant: "destructive" }),
+  });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: () =>
+      apiFetch("/api/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }),
+    onSuccess: () => {
+      toast({ title: t("profile.passwordChanged") });
+      setCurrentPassword("");
+      setNewPassword("");
+    },
+    onError: (e: Error) => toast({ title: t("profile.passwordChangeFailed"), description: e.message, variant: "destructive" }),
   });
 
   const deleteAccount = useMutation({
@@ -135,7 +171,93 @@ export default function AccountProfile() {
           </CardContent>
         </Card>
 
-        {/* Danger Zone */}
+        {/* Email + Password */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" /> {t("profile.emailPasswordTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(me as Record<string, unknown>)?.email ? (
+              <>
+                <div className="space-y-2">
+                  <Label>{t("profile.linkedEmail")}</Label>
+                  <div className="flex items-center gap-2">
+                    <Input value={String((me as Record<string, unknown>).email ?? "")} disabled className="bg-muted" />
+                    <Badge className="shrink-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                      {t("profile.linked")}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-4 space-y-3">
+                  <h4 className="text-sm font-semibold flex items-center gap-2">
+                    <Lock className="h-4 w-4" /> {t("profile.changePassword")}
+                  </h4>
+                  {(me as Record<string, unknown>)?.hasPassword && (
+                    <div className="space-y-2">
+                      <Label>{t("profile.currentPassword")}</Label>
+                      <Input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="********"
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label>{t("profile.newPassword")}</Label>
+                    <Input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder={t("profile.newPasswordPlaceholder")}
+                    />
+                  </div>
+                  <Button
+                    onClick={() => changePasswordMutation.mutate()}
+                    disabled={changePasswordMutation.isPending || newPassword.length < 8}
+                    className="gap-2"
+                  >
+                    <Lock className="h-4 w-4" /> {t("profile.changePasswordBtn")}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">{t("profile.linkEmailDesc")}</p>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>{t("profile.email")}</Label>
+                    <Input
+                      type="email"
+                      value={linkEmail}
+                      onChange={(e) => setLinkEmail(e.target.value)}
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("profile.password")}</Label>
+                    <Input
+                      type="password"
+                      value={linkPassword}
+                      onChange={(e) => setLinkPassword(e.target.value)}
+                      placeholder={t("profile.passwordPlaceholder")}
+                    />
+                  </div>
+                  <Button
+                    onClick={() => linkEmailMutation.mutate()}
+                    disabled={linkEmailMutation.isPending || !linkEmail || linkPassword.length < 8}
+                    className="gap-2"
+                  >
+                    <Link2 className="h-4 w-4" /> {t("profile.linkEmailBtn")}
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Data Export */}
         <Card>
           <CardHeader>

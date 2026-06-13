@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
 import { networkInterfaces } from "node:os";
 import crypto from "node:crypto";
+import { promisify } from "node:util";
 import { db, usersTable, sessionsTable } from "@workspace/db";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, isNull } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { checkAdminToken, isAdminAuthConfigured } from "../middlewares/admin-auth";
 import { type AuthedRequest, requireUser } from "../middlewares/session-auth";
@@ -35,6 +36,25 @@ function generateSessionId(): string {
 
 function generateUserId(): string {
   return `usr_${crypto.randomBytes(12).toString("hex")}`;
+}
+
+// --- Password hashing (scrypt, no external deps) ---
+
+const scryptAsync = promisify(crypto.scrypt);
+const SALT_LEN = 16;
+const KEY_LEN = 64;
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.randomBytes(SALT_LEN).toString("hex");
+  const key = (await scryptAsync(password, salt, KEY_LEN)) as Buffer;
+  return `${salt}:${key.toString("hex")}`;
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  const [salt, storedKey] = hash.split(":");
+  if (!salt || !storedKey) return false;
+  const key = (await scryptAsync(password, salt, KEY_LEN)) as Buffer;
+  return crypto.timingSafeEqual(Buffer.from(storedKey, "hex"), key);
 }
 
 // --- Rate limiting for auth ---
@@ -185,7 +205,155 @@ router.get("/auth/me", requireUser, async (req, res) => {
     res.status(404).json({ error: "User not found" });
     return;
   }
-  res.json(user);
+  res.json({
+    ...user,
+    hasPassword: !!(await db
+      .select({ passwordHash: usersTable.passwordHash })
+      .from(usersTable)
+      .where(eq(usersTable.id, r.userId!))
+      .limit(1)
+      .then((rows) => rows[0]?.passwordHash)),
+  });
+});
+
+// --- Email + Password auth ---
+
+router.post("/auth/login-email", loginLimiter, async (req, res) => {
+  const email = String(req.body?.email ?? "").trim().toLowerCase();
+  const password = String(req.body?.password ?? "");
+  if (!email || !password) {
+    res.status(400).json({ error: "Email and password required" });
+    return;
+  }
+
+  const [user] = await db
+    .select({
+      id: usersTable.id,
+      passwordHash: usersTable.passwordHash,
+      deletedAt: usersTable.deletedAt,
+      totpEnabled: usersTable.totpEnabled,
+      totpSecret: usersTable.totpSecret,
+    })
+    .from(usersTable)
+    .where(and(eq(usersTable.email, email), isNull(usersTable.deletedAt)))
+    .limit(1);
+
+  if (!user || !user.passwordHash) {
+    res.status(401).json({ error: "Invalid email or password" });
+    return;
+  }
+
+  const valid = await verifyPassword(password, user.passwordHash);
+  if (!valid) {
+    res.status(401).json({ error: "Invalid email or password" });
+    return;
+  }
+
+  // Check 2FA if enabled
+  if (user.totpEnabled && user.totpSecret) {
+    const totpCode = String(req.body?.totpCode ?? "").replace(/\s/g, "");
+    if (!totpCode) {
+      res.status(200).json({ ok: false, requires2FA: true, message: "2FA code required" });
+      return;
+    }
+    const { code: expectedCode } = generateTotp(user.totpSecret);
+    if (totpCode !== expectedCode) {
+      const { code: prevCode } = generateTotp(user.totpSecret, { timestamp: Math.floor(Date.now() / 1000) - 30 });
+      if (totpCode !== prevCode) {
+        res.status(401).json({ error: "Invalid 2FA code" });
+        return;
+      }
+    }
+  }
+
+  await db.update(usersTable).set({ lastLoginAt: new Date() }).where(eq(usersTable.id, user.id));
+
+  const sessionId = generateSessionId();
+  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+  await db.insert(sessionsTable).values({ id: sessionId, userId: user.id, expiresAt });
+
+  res.cookie("session", sessionId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: SESSION_DAYS * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  res.json({ ok: true, userId: user.id });
+});
+
+// Link email + set password (for existing users)
+router.post("/auth/link-email", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const email = String(req.body?.email ?? "").trim().toLowerCase();
+  const password = String(req.body?.password ?? "");
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ error: "Valid email required" });
+    return;
+  }
+  if (password.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
+
+  // Check if email is already used by another user
+  const [existing] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(and(eq(usersTable.email, email), isNull(usersTable.deletedAt)))
+    .limit(1);
+  if (existing && existing.id !== r.userId) {
+    res.status(409).json({ error: "Email already in use by another account" });
+    return;
+  }
+
+  const hash = await hashPassword(password);
+  await db
+    .update(usersTable)
+    .set({ email, passwordHash: hash, updatedAt: new Date() })
+    .where(eq(usersTable.id, r.userId!));
+
+  res.json({ ok: true, email });
+});
+
+// Change password (for users who already have one)
+router.post("/auth/change-password", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const currentPassword = String(req.body?.currentPassword ?? "");
+  const newPassword = String(req.body?.newPassword ?? "");
+
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: "New password must be at least 8 characters" });
+    return;
+  }
+
+  const [user] = await db
+    .select({ passwordHash: usersTable.passwordHash })
+    .from(usersTable)
+    .where(eq(usersTable.id, r.userId!))
+    .limit(1);
+
+  if (user?.passwordHash) {
+    if (!currentPassword) {
+      res.status(400).json({ error: "Current password required" });
+      return;
+    }
+    const valid = await verifyPassword(currentPassword, user.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: "Current password is incorrect" });
+      return;
+    }
+  }
+
+  const hash = await hashPassword(newPassword);
+  await db
+    .update(usersTable)
+    .set({ passwordHash: hash, updatedAt: new Date() })
+    .where(eq(usersTable.id, r.userId!));
+
+  res.json({ ok: true });
 });
 
 // --- 2FA (TOTP) endpoints ---

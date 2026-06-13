@@ -17,6 +17,7 @@ type AuthState = {
   isSignedIn: boolean;
   register: () => Promise<{ code: string }>;
   login: (code: string) => Promise<void>;
+  loginWithEmail: (email: string, password: string, totpCode?: string) => Promise<{ requires2FA?: boolean }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthState>({
   isSignedIn: false,
   register: async () => ({ code: "" }),
   login: async () => {},
+  loginWithEmail: async () => ({}),
   logout: async () => {},
   refresh: async () => {},
 });
@@ -64,13 +66,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await refresh();
   }, [refresh]);
 
+  const loginWithEmail = useCallback(async (email: string, password: string, totpCode?: string) => {
+    const result = await apiFetch<{ ok: boolean; requires2FA?: boolean }>("/api/auth/login-email", {
+      method: "POST",
+      body: JSON.stringify({ email, password, totpCode }),
+    });
+    if (result.requires2FA) return { requires2FA: true };
+    await refresh();
+    return {};
+  }, [refresh]);
+
   const logout = useCallback(async () => {
     await apiFetch("/api/auth/logout", { method: "POST" });
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoaded, isSignedIn: !!user, register, login, logout, refresh }}>
+    <AuthContext.Provider value={{ user, isLoaded, isSignedIn: !!user, register, login, loginWithEmail, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

@@ -10,6 +10,7 @@ export const usersTable = pgTable(
     authCode: text("auth_code").notNull().unique(),
     plan: text("plan").notNull().default("free"),
     role: text("role").notNull().default("user"),
+    passwordHash: text("password_hash"),
     totpSecret: text("totp_secret"),
     totpEnabled: boolean("totp_enabled").notNull().default(false),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),

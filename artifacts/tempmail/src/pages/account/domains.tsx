@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Globe, Plus, RefreshCw, Trash2, CheckCircle2, AlertCircle, Crown, Copy } from "lucide-react";
+import { Globe, Plus, RefreshCw, Trash2, CheckCircle2, AlertCircle, Crown, Copy, Share2, UserPlus, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +72,85 @@ export default function AccountDomains() {
     );
   }
   return <AccountLayout><DomainsInner /></AccountLayout>;
+}
+
+type DomainShare = { id: number; userId: string; displayName: string | null; createdAt: string };
+
+function ShareDomainSection({ domainId }: { domainId: number }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [shareUserId, setShareUserId] = useState("");
+
+  const { data: shares, isLoading } = useQuery<DomainShare[]>({
+    queryKey: [`/account/domains/${domainId}/shares`],
+    queryFn: () => apiFetch<DomainShare[]>(`/api/account/domains/${domainId}/shares`),
+  });
+
+  const addShare = useMutation({
+    mutationFn: (userId: string) =>
+      apiFetch(`/api/account/domains/${domainId}/shares`, {
+        method: "POST",
+        body: JSON.stringify({ userId }),
+      }),
+    onSuccess: () => {
+      setShareUserId("");
+      qc.invalidateQueries({ queryKey: [`/account/domains/${domainId}/shares`] });
+      toast({ title: t("domains.shareAdded") });
+    },
+    onError: (e: Error) => toast({ title: t("domains.shareError"), description: e.message, variant: "destructive" }),
+  });
+
+  const removeShare = useMutation({
+    mutationFn: (shareId: number) =>
+      apiFetch(`/api/account/domains/${domainId}/shares/${shareId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [`/account/domains/${domainId}/shares`] });
+      toast({ title: t("domains.shareRemoved") });
+    },
+  });
+
+  return (
+    <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-700">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <Share2 className="h-4 w-4" /> {t("domains.shareTitle")}
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={shareUserId}
+          onChange={(e) => setShareUserId(e.target.value)}
+          placeholder={t("domains.shareUserIdPlaceholder")}
+          className="text-xs font-mono"
+        />
+        <Button
+          size="sm"
+          onClick={() => addShare.mutate(shareUserId.trim())}
+          disabled={addShare.isPending || !shareUserId.trim()}
+        >
+          <UserPlus className="h-3 w-3 mr-1" /> {t("domains.shareBtn")}
+        </Button>
+      </div>
+      {isLoading ? (
+        <div className="text-xs text-muted-foreground">{t("domains.loading")}</div>
+      ) : shares && shares.length > 0 ? (
+        <div className="space-y-1">
+          {shares.map((s) => (
+            <div key={s.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-xs">
+              <span className="font-mono">{s.displayName || s.userId}</span>
+              <button
+                onClick={() => removeShare.mutate(s.id)}
+                className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-950 text-red-500 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">{t("domains.noShares")}</p>
+      )}
+    </div>
+  );
 }
 
 function DomainsInner() {
@@ -172,8 +251,8 @@ function DomainsInner() {
                   </Button>
                 </div>
               </CardHeader>
-              {!d.verifiedAt && (
-                <CardContent className="space-y-3">
+              <CardContent className="space-y-3">
+                {!d.verifiedAt && (
                   <div className="text-sm">
                     <p className="text-muted-foreground mb-2">{t("domains.dnsFullInstruction")}</p>
                     <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -188,8 +267,9 @@ function DomainsInner() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">{t("domains.dnsPropagation")}</p>
                   </div>
-                </CardContent>
-              )}
+                )}
+                <ShareDomainSection domainId={d.id} />
+              </CardContent>
             </Card>
           ))}
         </div>

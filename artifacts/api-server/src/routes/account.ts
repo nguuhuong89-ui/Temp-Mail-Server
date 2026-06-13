@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, apiKeysTable, inboxesTable, domainsTable, emailsTable, usersTable, auditLogsTable, savedInboxesTable } from "@workspace/db";
-import { and, eq, desc, sql, isNull } from "drizzle-orm";
+import { db, apiKeysTable, inboxesTable, domainsTable, emailsTable, usersTable, auditLogsTable, savedInboxesTable, domainSharesTable } from "@workspace/db";
+import { and, eq, desc, sql, isNull, inArray } from "drizzle-orm";
 import { generateApiKey } from "../lib/api-key-auth";
 import { verifyDomainMx } from "../lib/domain-verify";
 import { invalidateDomainCache } from "../lib/domain-cache";
@@ -425,8 +425,137 @@ router.delete("/account/domains/:id", requireUser, requirePro, async (req, res) 
     .where(and(eq(domainsTable.id, id), eq(domainsTable.userId, r.userId!)))
     .returning({ id: domainsTable.id });
   if (result.length === 0) { res.status(404).json({ error: "Domain not found" }); return; }
+  // Clean up shares for deleted domain
+  await db.delete(domainSharesTable).where(eq(domainSharesTable.domainId, id));
   invalidateDomainCache();
   res.status(204).end();
+});
+
+// === Domain sharing ===
+
+// List shares for a domain
+router.get("/account/domains/:id/shares", requireUser, requirePro, async (req, res) => {
+  const r = req as AuthedRequest;
+  const domainId = Number(req.params["id"]);
+  if (!Number.isFinite(domainId)) { res.status(400).json({ error: "invalid id" }); return; }
+  const [domain] = await db
+    .select({ id: domainsTable.id })
+    .from(domainsTable)
+    .where(and(eq(domainsTable.id, domainId), eq(domainsTable.userId, r.userId!)))
+    .limit(1);
+  if (!domain) { res.status(404).json({ error: "Domain not found" }); return; }
+
+  const shares = await db
+    .select({
+      id: domainSharesTable.id,
+      sharedWithUserId: domainSharesTable.sharedWithUserId,
+      displayName: usersTable.displayName,
+      createdAt: domainSharesTable.createdAt,
+    })
+    .from(domainSharesTable)
+    .leftJoin(usersTable, eq(usersTable.id, domainSharesTable.sharedWithUserId))
+    .where(eq(domainSharesTable.domainId, domainId))
+    .orderBy(desc(domainSharesTable.createdAt));
+
+  res.json(shares.map((s) => ({
+    id: s.id,
+    userId: s.sharedWithUserId,
+    displayName: s.displayName ?? null,
+    createdAt: s.createdAt.toISOString(),
+  })));
+});
+
+// Share a domain with a user
+router.post("/account/domains/:id/shares", requireUser, requirePro, async (req, res) => {
+  const r = req as AuthedRequest;
+  const domainId = Number(req.params["id"]);
+  if (!Number.isFinite(domainId)) { res.status(400).json({ error: "invalid id" }); return; }
+
+  const targetUserId = String(req.body?.userId ?? "").trim();
+  if (!targetUserId) { res.status(400).json({ error: "userId required" }); return; }
+  if (targetUserId === r.userId) { res.status(400).json({ error: "Cannot share with yourself" }); return; }
+
+  const [domain] = await db
+    .select({ id: domainsTable.id })
+    .from(domainsTable)
+    .where(and(eq(domainsTable.id, domainId), eq(domainsTable.userId, r.userId!)))
+    .limit(1);
+  if (!domain) { res.status(404).json({ error: "Domain not found" }); return; }
+
+  const [targetUser] = await db
+    .select({ id: usersTable.id, displayName: usersTable.displayName })
+    .from(usersTable)
+    .where(and(eq(usersTable.id, targetUserId), isNull(usersTable.deletedAt)))
+    .limit(1);
+  if (!targetUser) { res.status(404).json({ error: "User not found" }); return; }
+
+  try {
+    const [share] = await db
+      .insert(domainSharesTable)
+      .values({ domainId, sharedWithUserId: targetUserId, sharedByUserId: r.userId! })
+      .returning();
+    if (!share) { res.status(500).json({ error: "Failed to create share" }); return; }
+    res.status(201).json({
+      id: share.id,
+      userId: share.sharedWithUserId,
+      displayName: targetUser.displayName ?? null,
+      createdAt: share.createdAt.toISOString(),
+    });
+  } catch {
+    res.status(409).json({ error: "Already shared with this user" });
+  }
+});
+
+// Remove a domain share
+router.delete("/account/domains/:id/shares/:shareId", requireUser, requirePro, async (req, res) => {
+  const r = req as AuthedRequest;
+  const domainId = Number(req.params["id"]);
+  const shareId = Number(req.params["shareId"]);
+  if (!Number.isFinite(domainId) || !Number.isFinite(shareId)) {
+    res.status(400).json({ error: "invalid id" });
+    return;
+  }
+  const [domain] = await db
+    .select({ id: domainsTable.id })
+    .from(domainsTable)
+    .where(and(eq(domainsTable.id, domainId), eq(domainsTable.userId, r.userId!)))
+    .limit(1);
+  if (!domain) { res.status(404).json({ error: "Domain not found" }); return; }
+
+  const result = await db
+    .delete(domainSharesTable)
+    .where(and(eq(domainSharesTable.id, shareId), eq(domainSharesTable.domainId, domainId)))
+    .returning({ id: domainSharesTable.id });
+  if (result.length === 0) { res.status(404).json({ error: "Share not found" }); return; }
+  res.status(204).end();
+});
+
+// List domains shared with me
+router.get("/account/shared-domains", requireUser, async (req, res) => {
+  const r = req as AuthedRequest;
+  const shares = await db
+    .select({
+      domainId: domainSharesTable.domainId,
+      domainName: domainsTable.name,
+      domainStatus: domainsTable.status,
+      ownerId: domainsTable.userId,
+      ownerName: usersTable.displayName,
+      sharedAt: domainSharesTable.createdAt,
+    })
+    .from(domainSharesTable)
+    .innerJoin(domainsTable, eq(domainsTable.id, domainSharesTable.domainId))
+    .leftJoin(usersTable, eq(usersTable.id, domainsTable.userId))
+    .where(eq(domainSharesTable.sharedWithUserId, r.userId!))
+    .orderBy(desc(domainSharesTable.createdAt));
+
+  res.json(shares.map((s) => ({
+    domainId: s.domainId,
+    name: s.domainName,
+    status: s.domainStatus,
+    ownerId: s.ownerId,
+    ownerName: s.ownerName ?? null,
+    sharedAt: s.sharedAt.toISOString(),
+  })));
 });
 
 export default router;

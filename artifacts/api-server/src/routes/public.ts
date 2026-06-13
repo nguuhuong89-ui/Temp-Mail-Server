@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request } from "express";
 import rateLimit from "express-rate-limit";
-import { db, domainsTable } from "@workspace/db";
-import { and, eq, or } from "drizzle-orm";
+import { db, domainsTable, domainSharesTable } from "@workspace/db";
+import { and, eq, or, inArray } from "drizzle-orm";
 import { generateTotp, parseOtpAuthUri } from "../lib/totp";
 
 const router: IRouter = Router();
@@ -15,13 +15,25 @@ const totpLimiter = rateLimit({
 });
 
 // Public list of domains usable on the home-page picker.
-// Returns active+public domains PLUS the signed-in user's own active domains.
+// Returns active+public domains PLUS the signed-in user's own + shared domains.
 router.get("/public/domains", async (req, res) => {
   const userId = (req as Request & { userId?: string }).userId ?? null;
+
+  let sharedDomainIds: number[] = [];
+  if (userId) {
+    const shares = await db
+      .select({ domainId: domainSharesTable.domainId })
+      .from(domainSharesTable)
+      .where(eq(domainSharesTable.sharedWithUserId, userId));
+    sharedDomainIds = shares.map((s) => s.domainId);
+  }
+
   const condition = userId
     ? and(
         eq(domainsTable.status, "active"),
-        or(eq(domainsTable.isPublic, true), eq(domainsTable.userId, userId)),
+        sharedDomainIds.length > 0
+          ? or(eq(domainsTable.isPublic, true), eq(domainsTable.userId, userId), inArray(domainsTable.id, sharedDomainIds))
+          : or(eq(domainsTable.isPublic, true), eq(domainsTable.userId, userId)),
       )
     : and(eq(domainsTable.status, "active"), eq(domainsTable.isPublic, true));
   const rows = await db
